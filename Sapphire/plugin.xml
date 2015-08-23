@@ -8,10 +8,6 @@
 
    <extension
          point="org.eclipse.ui.views">
-      <category
-            name="School Plugin"
-            id="com.example.schoolplugin">
-      </category>
 
    </extension>
    <extension

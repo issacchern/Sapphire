@@ -1,10 +1,9 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
-Bundle-Name: SchoolPlugin
-Bundle-SymbolicName: dodod;singleton:=true
-Bundle-Version: 1.0.0.qualifier
+Bundle-Name: Sapphire
+Bundle-SymbolicName: sapphire;singleton:=true
+Bundle-Version: 1.0.1
 Bundle-Activator: edu.buffalo.cse.Sapphire.Activator
-Bundle-Vendor: EXAMPLE
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime
 Bundle-RequiredExecutionEnvironment: JavaSE-1.8
