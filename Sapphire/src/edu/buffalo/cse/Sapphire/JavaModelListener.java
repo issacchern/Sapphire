@@ -1,10 +1,6 @@
 /**
- * This file is the main part of Project Sapphire.
+ * This file is part of Sapphire.
  * 
- * Project Sapphire is an eclipse plugin research project 
- * under supervision of Prof. Carl Alphonce and Prof. Bina 
- * Ramamurthy from University at Buffalo, New York.
- *  
  * Sapphire is a free plugin software, licensed under the terms of the 
  * Eclipse Public License, version 1.0.  The license is available at
  * http://www.eclipse.org/legal/epl-v10.html
@@ -343,7 +339,7 @@ public class JavaModelListener implements IElementChangedListener{
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
 				parserTemp.setResolveBindings(true);
 				astRootTemp = (CompilationUnit) parserTemp.createAST(null);
-				System.out.println(astRootTemp);
+		//		System.out.println(astRootTemp);
 				className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
 			
 			}

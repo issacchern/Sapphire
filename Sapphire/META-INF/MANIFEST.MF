@@ -1,7 +1,7 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: SchoolPlugin
-Bundle-SymbolicName: Sapphire;singleton:=true
+Bundle-SymbolicName: dodod;singleton:=true
 Bundle-Version: 1.0.0.qualifier
 Bundle-Activator: edu.buffalo.cse.Sapphire.Activator
 Bundle-Vendor: EXAMPLE

@@ -1,3 +1,14 @@
+/**
+ * This file is part of Sapphire.
+ * 
+ * Sapphire is a free plugin software, licensed under the terms of the 
+ * Eclipse Public License, version 1.0.  The license is available at
+ * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Sapphire © 2015 University at Buffalo. All rights reserved.  
+ */
+
+
 package edu.buffalo.cse.Sapphire;
 
 import java.io.IOException;
