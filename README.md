@@ -12,6 +12,8 @@ Sapphire is a free eclipse plugin software that captures all the changes under J
 6. Click finish. Extract the jar file from the Zip file and drop it in the dropins folder inside the eclipse folder.
 7. You are all set!
 
+Skip step 2-5 if you intend to use the jar file from the downloaded zip folder. 
+
 # Description
 
 This plugin is used for recording the changes that users made under JavaModel from time to time. The objective of developing this plugin is to help students in learning how to code efficiently. By analyzing the output file generated from the plugin, we can see how the students wrote the code and we will see the kind of common mistakes they made and what their struggles are while coding. Thereby, we can teach students the right way of coding and avoid making unnecessary mistakes.

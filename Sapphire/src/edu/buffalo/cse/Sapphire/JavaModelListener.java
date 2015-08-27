@@ -67,6 +67,7 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	private static boolean isTempLarger = false;
 	private static boolean visitJavaModel = false;
+	private static boolean skipPrint = false;
 
 	private static int lineNumberCheck = 0;
 	
@@ -362,35 +363,46 @@ public class JavaModelListener implements IElementChangedListener{
 		
 				Calendar cal = Calendar.getInstance();
 		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-				
-				isTempLarger = true;
-				long2 = "";
-				lineNumberCheck = 0;
-				
-				// print out the CompilationUnit 
-				print(astRootTemp);
-				stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
-
-				for(int i = 0; i < stringArrayTemp.size(); i++){
+		        
+		        if(skipPrint){
+		        	System.out.println(sdf.format(cal.getTime()) +  " [COMPILATION_UNIT INITIALIZED]");
+		        }
+		        
+		        else{
+		        	isTempLarger = true;
+					long2 = "";
+					lineNumberCheck = 0;
 					
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
-					stringArrayTemp.get(i));
-				}
+					// print out the CompilationUnit 
+					print(astRootTemp);
+					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+
+					for(int i = 0; i < stringArrayTemp.size(); i++){
+						
+						System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
+						stringArrayTemp.get(i));
+					}
+					
+					// print out the comments and docs
+					parse(sourceTemp);
+					
+					for(int i = 0; i < commentListTemp.size(); i++){
+								
+						System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
+						commentListTemp.get(i));
+					}
+					
+					
+					stringArrayTemp.clear();
+					stringArrayTempLineNumber.clear();
+					stringArrayTempContent.clear();
+					
+					commentListTemp.clear();
+					commentListTempContent.clear();
+		        }
 				
-				// print out the comments and docs
-				parse(sourceTemp);
+		        
 				
-				for(int i = 0; i < commentListTemp.size(); i++){
-							
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
-					commentListTemp.get(i));
-				}
-				stringArrayTemp.clear();
-				stringArrayTempLineNumber.clear();
-				stringArrayTempContent.clear();
-				
-				commentListTemp.clear();
-				commentListTempContent.clear();
 
 			}
 			
@@ -717,6 +729,7 @@ public class JavaModelListener implements IElementChangedListener{
 										event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
 									
 									cuTemp = null;
+									skipPrint = false;
 									printAST(event); 
 								}
 							}
@@ -741,6 +754,7 @@ public class JavaModelListener implements IElementChangedListener{
 													event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName()
 													+ "]");
 											cuTemp = null;
+											skipPrint = true;
 											printAST(event);
 										}	
 									}
@@ -791,6 +805,7 @@ public class JavaModelListener implements IElementChangedListener{
 											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
 										
 										cuTemp = null;
+										skipPrint = false;
 										printAST(event);
 									}
 									
