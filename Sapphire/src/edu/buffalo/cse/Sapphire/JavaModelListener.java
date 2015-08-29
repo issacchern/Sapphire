@@ -33,7 +33,6 @@ import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT_ROOT;
 import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IElementChangedListener;
-import org.eclipse.jdt.core.IJavaElement;
 import org.eclipse.jdt.core.IJavaElementDelta;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -59,21 +58,20 @@ public class JavaModelListener implements IElementChangedListener{
 	//change these values to serve you needs 
 	
 	private static String fileNameAndLocation =  "main_recorder";
-
 	private static String className = "";
 	private static String long2 = "";
-	
 	private static String previousJavaProjectName = "";
+	private static String projectAndClassName = "";
 	
 	private static boolean isTempLarger = false;
 	private static boolean visitJavaModel = false;
-	private static boolean skipPrint = false;
-
+	
 	private static int lineNumberCheck = 0;
 	
-	private FileOutputStream fout;
-	
+	private static HashMap<String, ASTNode> mapCu = new HashMap<String, ASTNode>();
 	private static HashMap<Integer, String> mapValue;
+	
+	private FileOutputStream fout;
 	
 	private static IElementChangedListener _listener = new JavaModelListener();
 	
@@ -107,8 +105,7 @@ public class JavaModelListener implements IElementChangedListener{
 	 */
 	
 	public JavaModelListener(){
-		
-		
+
 		try
 		{
 			File newFile = new File(fileNameAndLocation);
@@ -126,7 +123,7 @@ public class JavaModelListener implements IElementChangedListener{
 			ex.printStackTrace();
 		}	
 		
-		cuTemp = null;
+		astRootTemp = null;
 
         mapValue = new HashMap<Integer , String>();
         
@@ -241,7 +238,7 @@ public class JavaModelListener implements IElementChangedListener{
 					int lineNumber;
 					 
 					if(isTempLarger){
-						 lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
+						lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
 					}
 					else{
 						lineNumber = astRoot.getLineNumber(node.getStartPosition());
@@ -297,10 +294,8 @@ public class JavaModelListener implements IElementChangedListener{
 					int start = node.getStartPosition();
 					int end = start + node.getLength();
 					String comment = strA.substring(start, end);
-					
 					int lineNumber;
-					
-					
+
 					if(isTempLarger){
 						 lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
 					}
@@ -343,15 +338,7 @@ public class JavaModelListener implements IElementChangedListener{
 		
 		try{
 			// When the user switch java file or project, cuTemp is expected to be null.
-			if(cuTemp == null){			
-				
-				if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
-					className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
-				}
-				else{
-					// check if thing goes wrong
-					className = "unknown";
-				}
+			if(astRootTemp == null){			
 				
 				cuTemp = (ICompilationUnit) event.getDelta().getElement();
 				sourceTemp = cuTemp.getSource();
@@ -360,63 +347,38 @@ public class JavaModelListener implements IElementChangedListener{
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
 				parserTemp.setResolveBindings(true);
 				astRootTemp = (CompilationUnit) parserTemp.createAST(null);
-		
 				Calendar cal = Calendar.getInstance();
 		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-		        
-		        if(skipPrint){
-		        	System.out.println(sdf.format(cal.getTime()) +  " [COMPILATION_UNIT INITIALIZED]");
-		        }
-		        
-		        else{
-		        	isTempLarger = true;
-					long2 = "";
-					lineNumberCheck = 0;
-					
-					// print out the CompilationUnit 
-					print(astRootTemp);
-					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
 
-					for(int i = 0; i < stringArrayTemp.size(); i++){
-						
-						System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
-						stringArrayTemp.get(i));
-					}
-					
-					// print out the comments and docs
-					parse(sourceTemp);
-					
-					for(int i = 0; i < commentListTemp.size(); i++){
-								
-						System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")] : " + 
-						commentListTemp.get(i));
-					}
-					
-					
-					stringArrayTemp.clear();
-					stringArrayTempLineNumber.clear();
-					stringArrayTempContent.clear();
-					
-					commentListTemp.clear();
-					commentListTempContent.clear();
-		        }
-				
 		        
+		        isTempLarger = true;
+				long2 = "";
+				lineNumberCheck = 0;
 				
+				// print out the CompilationUnit 
+				print(astRootTemp);
+				stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+
+				for(int i = 0; i < stringArrayTemp.size(); i++){
+					
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
+					stringArrayTemp.get(i));
+				}
+				
+				// print out the comments and docs
+				parse(sourceTemp);
+				
+				for(int i = 0; i < commentListTemp.size(); i++){
+							
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
+					commentListTemp.get(i));
+				}
+	
+				arrayClear();
 
 			}
 			
 			else{
-				
-				// set the className
-				
-				if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
-					className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
-				}
-				else{
-					// check if thing goes wrong
-					className = "unknown";
-				}
 				
 				cu = (ICompilationUnit) event.getDelta().getElement();				
 				source = cu.getSource();
@@ -569,13 +531,13 @@ public class JavaModelListener implements IElementChangedListener{
 
 		        // display what new element is added 
 				for(int i = 0 ; i < afterModificationAdded.size(); i++){
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")] : " + 
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
 							afterModificationAdded.get(i));
 				}
 				
 				// display what old element is removed
 				for(int i = 0 ; i < afterModificationRemoved.size(); i++){
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")] : " + 
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
 							afterModificationRemoved.get(i));
 				}
 			
@@ -627,28 +589,20 @@ public class JavaModelListener implements IElementChangedListener{
 
 				// display what new comment is added
 				for(int i = 0 ; i < afterCommentAdded.size(); i++){
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")] : " + 
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
 							afterCommentAdded.get(i));
 				}
 				
 				// display what old comment is removed
 				for(int i = 0 ; i < afterCommentRemoved.size(); i++){
-					System.out.println(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")] : " + 
+					System.out.println(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
 							afterCommentRemoved.get(i));   
 				}
 				
 
 				// remove all elements in those lists 
-				stringArray.clear();
-				stringArrayTemp.clear();
-				stringArrayLineNumber.clear();
-				stringArrayTempLineNumber.clear();
-				stringArrayContent.clear();
-				stringArrayTempContent.clear();
-				commentList.clear();
-				commentListTemp.clear();
-				commentListContent.clear();
-				commentListTempContent.clear();
+				arrayClear();
+
 				
 				// set the current CompilationUnit as previous one for next elementChanged event 
 				cuTemp = cu;			
@@ -728,9 +682,19 @@ public class JavaModelListener implements IElementChangedListener{
 										event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
 										event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
 									
-									cuTemp = null;
-									skipPrint = false;
-									printAST(event); 
+									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
+									projectAndClassName = previousJavaProjectName + "." + className;
+	
+									if(mapCu.containsKey(projectAndClassName)){
+										astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+										printAST(event);
+										mapCu.replace(projectAndClassName, astRootTemp);
+									}
+									else{
+										astRootTemp = null;
+										printAST(event);
+										mapCu.put(projectAndClassName, astRootTemp);	
+									}
 								}
 							}
 						}
@@ -742,9 +706,22 @@ public class JavaModelListener implements IElementChangedListener{
 									if(event.getDelta().getCompilationUnitAST() != null && 
 											event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
 											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+										
 										if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName().
 												equals(className)){
-											printAST(event);		
+											
+											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+											projectAndClassName = previousJavaProjectName + "." + className;							
+											if(mapCu.containsKey(projectAndClassName)){
+												astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+												printAST(event);
+												mapCu.replace(projectAndClassName, astRootTemp);
+											}
+											else{
+												astRootTemp = null;
+												printAST(event);
+												mapCu.put(projectAndClassName, astRootTemp);
+											}
 										}
 										
 										else{	
@@ -753,17 +730,26 @@ public class JavaModelListener implements IElementChangedListener{
 											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT CHANGED TO " + 
 													event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName()
 													+ "]");
-											cuTemp = null;
-											skipPrint = true;
-											printAST(event);
+											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+											projectAndClassName = previousJavaProjectName + "." + className;							
+											
+											if(mapCu.containsKey(projectAndClassName)){
+												astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+												printAST(event);
+												mapCu.replace(projectAndClassName, astRootTemp);
+											}
+											else{
+												astRootTemp = null;
+												printAST(event);
+												mapCu.put(projectAndClassName, astRootTemp);
+											}
+
 										}	
 									}
 									
 									else{
- 		
 										Calendar cal = Calendar.getInstance();
-								        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-																	
+								        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");			
 										ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
 										ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
 										parserCheck.setSource(cuCheck); 
@@ -772,47 +758,71 @@ public class JavaModelListener implements IElementChangedListener{
 										ASTNode astCheck = (CompilationUnit) parserCheck.createAST(null);
 										
 										if(astCheck.toString().length() == 0){
-											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR] : EMPTY SOURCE FILE DETECTED");							
-											cuTemp = null;
-									
+											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED");							
+											
+											if(astRootTemp != null){
+												isTempLarger = true;
+												long2 = "";
+												lineNumberCheck = 0;
+												print(astRootTemp);
+												stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+																							
+												for(int i = 0 ; i < stringArrayTemp.size(); i ++){
+													System.out.println(sdf.format(cal.getTime()) + " [LINE REMOVED (" + className + ")]: " + 
+													stringArrayTemp.get(i));
+												}	
+												stringArrayTemp.clear();	
+											}
+											
+											className = "";
+											astRootTemp = null; 
+
 										} else{
 											// we hope the user would not do something too crazy at this point
-											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR] : INVALID CLASS NAME OR MISSING CLASS TYPE");
+											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE");
+											className = "";
+											astRootTemp = null; 
 										}
 									}
 								}
-					
 							}
 							
 							else{
-
 								Calendar cal = Calendar.getInstance();
 						        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 								System.out.println(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]");
 								// close the previous file stream
 								fout.close(); 
+								
 								previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
 								fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
 								// create new file stream
 								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
 								
 								System.out.println(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]");
-								
 								if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
 								
 									if(event.getDelta().getCompilationUnitAST() != null && 
 											event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
 											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+
+										className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+										projectAndClassName = previousJavaProjectName + "." + className;							
 										
-										cuTemp = null;
-										skipPrint = false;
-										printAST(event);
+										if(mapCu.containsKey(projectAndClassName)){
+											astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+											printAST(event);
+											mapCu.replace(projectAndClassName, astRootTemp);
+										}
+										else{
+											astRootTemp = null;
+											printAST(event);
+											mapCu.put(projectAndClassName, astRootTemp);
+										}	
 									}
 									
 									else{															
 										ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
-
-										
 										ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
 										parserCheck.setSource(cuCheck); 
 										parserCheck.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -821,21 +831,19 @@ public class JavaModelListener implements IElementChangedListener{
 										
 										if(astCheck.toString().length() == 0){
 											// then it is all being cut and removed
-											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR] : EMPTY SOURCE FILE DETECTED");							
-											cuTemp = null;
+											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED");							
+											className = "";											
+											astRootTemp = null;
 
 											
 										} else{
-											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR] : INVALID CLASS NAME OR MISSING CLASS TYPE");
-											// cuTemp has to be null because of changing project 
-											cuTemp = null; 
+											System.out.println(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE");
+											className = "";	
+											astRootTemp = null;
 										}
 									}
-								
 								}
-
 							}
-
 						}
 					}
 							
@@ -846,7 +854,6 @@ public class JavaModelListener implements IElementChangedListener{
 			}
 			
 			else{
-				
 				visitJavaModel = false;;
 			}
 
@@ -891,8 +898,7 @@ public class JavaModelListener implements IElementChangedListener{
 		        }
 		        
 		        else{
-		        	if(projectName.equals(previousJavaProjectName)){
-		        		
+		        	if(projectName.equals(previousJavaProjectName)){	
 		        		// do nothing now... 
 		        	}
 		        	
@@ -949,8 +955,7 @@ public class JavaModelListener implements IElementChangedListener{
 		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");	        
 		        String projectName = delta.getElement().getJavaProject().getProject().getName();	    
 
-		        if(projectName.equals(previousJavaProjectName)){
-	        		
+		        if(projectName.equals(previousJavaProjectName)){	
 	        		// do nothing now... 
 	        	}
 	        	
@@ -1099,7 +1104,6 @@ public class JavaModelListener implements IElementChangedListener{
 					stringArrayTempContent.add(long2);
 				}
 				else{
-
 					stringArray.add(lineNumberCheck + " $ " + long2); 
 					stringArrayLineNumber.add(lineNumberCheck);
 					stringArrayContent.add(long2); 
@@ -1112,6 +1116,20 @@ public class JavaModelListener implements IElementChangedListener{
 				long2 += strSimple + "(" + strValue + ") | ";	
 			}
 		}		
+	}
+	
+	public void arrayClear(){
+		stringArray.clear();
+		stringArrayTemp.clear();
+		stringArrayLineNumber.clear();
+		stringArrayTempLineNumber.clear();
+		stringArrayContent.clear();
+		stringArrayTempContent.clear();
+		commentList.clear();
+		commentListTemp.clear();
+		commentListContent.clear();
+		commentListTempContent.clear();	
+		
 	}
 
 }
