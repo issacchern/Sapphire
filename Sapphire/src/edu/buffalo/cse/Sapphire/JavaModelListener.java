@@ -8,7 +8,6 @@
  * Sapphire © 2015 University at Buffalo. All rights reserved.  
  */
 
-
 package edu.buffalo.cse.Sapphire;
 
 import java.io.File;
@@ -30,10 +29,16 @@ import static org.eclipse.jdt.core.IJavaElement.COMPILATION_UNIT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT_ROOT;
 
+
+import static org.eclipse.jdt.core.dom.ASTNode.IMPORT_DECLARATION;
+
+
+
 import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IElementChangedListener;
 import org.eclipse.jdt.core.IJavaElementDelta;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -65,10 +70,12 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	private static boolean isTempLarger = false;
 	private static boolean visitJavaModel = false;
+	private static int lastLineNumber = 0;
 	
 	private static int lineNumberCheck = 0;
 	
-	private static HashMap<String, ASTNode> mapCu = new HashMap<String, ASTNode>();
+	private static HashMap<String, String> mapString = new HashMap<String, String>();
+	private static HashMap<String, ASTNode> mapAST = new HashMap<String, ASTNode>();
 	private static HashMap<Integer, String> mapValue;
 	
 	private FileOutputStream fout;
@@ -84,11 +91,9 @@ public class JavaModelListener implements IElementChangedListener{
 	private static CompilationUnit astRoot;
 	
 	private static List<String> stringArray = new ArrayList<String>();
-	private static List<Integer> stringArrayLineNumber = new ArrayList<Integer>();
 	private static List<String> stringArrayContent = new ArrayList<String>();
 	
 	private static List<String> stringArrayTemp = new ArrayList<String>();
-	private static List<Integer> stringArrayTempLineNumber = new ArrayList<Integer>();
 	private static List<String> stringArrayTempContent = new ArrayList<String>();
 	
 	private static List<String> commentList = new ArrayList<String>();
@@ -342,6 +347,9 @@ public class JavaModelListener implements IElementChangedListener{
 				
 				cuTemp = (ICompilationUnit) event.getDelta().getElement();
 				sourceTemp = cuTemp.getSource();
+				
+				mapString.put(projectAndClassName, sourceTemp);
+				
 				ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
 				parserTemp.setSource(cuTemp); 
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -357,7 +365,13 @@ public class JavaModelListener implements IElementChangedListener{
 				
 				// print out the CompilationUnit 
 				print(astRootTemp);
-				stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+				
+				if(lineNumberCheck == 0 || long2.length() == 0){
+				}
+				else{
+					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+				}
+				
 
 				for(int i = 0; i < stringArrayTemp.size(); i++){
 					
@@ -366,7 +380,7 @@ public class JavaModelListener implements IElementChangedListener{
 				}
 				
 				// print out the comments and docs
-				parse(sourceTemp);
+				parse(mapString.get(projectAndClassName));
 				
 				for(int i = 0; i < commentListTemp.size(); i++){
 							
@@ -393,10 +407,15 @@ public class JavaModelListener implements IElementChangedListener{
 				lineNumberCheck = 0;
 				print(astRootTemp);
 				
-				// add the last piece of element
-				stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
-				stringArrayTempLineNumber.add(lineNumberCheck); 
-				stringArrayTempContent.add(long2);
+				
+				if(lineNumberCheck == 0 || long2.length() == 0){
+				}
+				else{
+					// add the last piece of element
+					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+					stringArrayTempContent.add(long2);
+				}
+				
 				
 				// reset the data
 				long2 = "";	
@@ -405,10 +424,15 @@ public class JavaModelListener implements IElementChangedListener{
 
 				print(astRoot);
 				
-				// add the last piece of element
-				stringArray.add(lineNumberCheck + " $ " + long2);
-				stringArrayLineNumber.add(lineNumberCheck);
-				stringArrayContent.add(long2);
+				if(lineNumberCheck == 0 || long2.length() == 0){
+				}
+				else{
+					// add the last piece of element
+					stringArray.add(lineNumberCheck + " $ " + long2);
+					stringArrayContent.add(long2);
+				}
+				
+				
 						
 				// this algorithm marks the duplicate element with "duplicate" with the count at the end
 				// NOTE: this is for current unit
@@ -418,15 +442,24 @@ public class JavaModelListener implements IElementChangedListener{
 					int index = stringArray.get(i).indexOf('$');
 					String stringSub = stringArray.get(i).substring(index);	
 					
-					if(arr.contains(stringSub)){
-						cnt++;
-						stringArray.set(i, stringArray.get(i) + "(duplicate: " + cnt + " )");
-						stringArrayContent.set(i, stringSub.substring(2) + "(duplicate: " + cnt + " )");
-						arr.add(stringSub + "(duplicate: " + cnt + " )");
+					if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
+						
 					}
+					
 					else{
-						arr.add(stringSub);
+						if(arr.contains(stringSub)){
+							cnt++;
+							stringArray.set(i, stringArray.get(i) + "(duplicate: " + cnt + " )");
+							stringArrayContent.set(i, stringSub.substring(2) + "(duplicate: " + cnt + " )");
+							arr.add(stringSub + "(duplicate: " + cnt + " )");
+						}
+						else{
+							arr.add(stringSub);
+						}	
 					}
+			
+					
+					
 
 				}
 				
@@ -439,15 +472,24 @@ public class JavaModelListener implements IElementChangedListener{
 					int index = stringArrayTemp.get(i).indexOf('$');
 					String stringSub = stringArrayTemp.get(i).substring(index);	
 					
-					if(arrTemp.contains(stringSub)){
-						cntTemp++;
-						stringArrayTemp.set(i, stringArrayTemp.get(i) + "(duplicate: " + cntTemp + " )");
-						stringArrayTempContent.set(i, stringSub.substring(2) + "(duplicate: " + cntTemp + " )");
-						arrTemp.add(stringSub + "(duplicate: " + cntTemp + " )");
+					if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
+						
 					}
+					
 					else{
-						arrTemp.add(stringSub);
+						if(arrTemp.contains(stringSub)){
+							cntTemp++;
+							stringArrayTemp.set(i, stringArrayTemp.get(i) + "(duplicate: " + cntTemp + " )");
+							stringArrayTempContent.set(i, stringSub.substring(2) + "(duplicate: " + cntTemp + " )");
+							arrTemp.add(stringSub + "(duplicate: " + cntTemp + " )");
+						}
+						else{
+							arrTemp.add(stringSub);
+						}	
+						
 					}
+					
+					
 				}
 				
 				// clone another ArrayList for other usage
@@ -541,9 +583,14 @@ public class JavaModelListener implements IElementChangedListener{
 							afterModificationRemoved.get(i));
 				}
 			
+				
+				
+				
+				
+				
 				// retrieve the comment elements
 				isTempLarger = true;
-				parse(sourceTemp);
+				parse(mapString.get(projectAndClassName));
 				isTempLarger = false;
 				parse(source);
 				
@@ -607,6 +654,7 @@ public class JavaModelListener implements IElementChangedListener{
 				// set the current CompilationUnit as previous one for next elementChanged event 
 				cuTemp = cu;			
 				sourceTemp = cuTemp.getSource();
+				mapString.replace(projectAndClassName, sourceTemp);
 				ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
 				parserTemp.setSource(cuTemp); 
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -658,7 +706,7 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	@Override
 	public void elementChanged(ElementChangedEvent event) {	
-
+		
 		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
 			traverseAndPrint(event.getDelta());
 		}
@@ -685,15 +733,17 @@ public class JavaModelListener implements IElementChangedListener{
 									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
 									projectAndClassName = previousJavaProjectName + "." + className;
 	
-									if(mapCu.containsKey(projectAndClassName)){
-										astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+									if(mapAST.containsKey(projectAndClassName)){
+										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 										printAST(event);
-										mapCu.replace(projectAndClassName, astRootTemp);
+										mapAST.replace(projectAndClassName, astRootTemp);
+										
 									}
 									else{
 										astRootTemp = null;
 										printAST(event);
-										mapCu.put(projectAndClassName, astRootTemp);	
+										mapAST.put(projectAndClassName, astRootTemp);	
+										
 									}
 								}
 							}
@@ -712,15 +762,17 @@ public class JavaModelListener implements IElementChangedListener{
 											
 											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
 											projectAndClassName = previousJavaProjectName + "." + className;							
-											if(mapCu.containsKey(projectAndClassName)){
-												astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+											if(mapAST.containsKey(projectAndClassName)){
+												astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 												printAST(event);
-												mapCu.replace(projectAndClassName, astRootTemp);
+												mapAST.replace(projectAndClassName, astRootTemp);
+												
 											}
 											else{
 												astRootTemp = null;
 												printAST(event);
-												mapCu.put(projectAndClassName, astRootTemp);
+												mapAST.put(projectAndClassName, astRootTemp);
+												
 											}
 										}
 										
@@ -733,15 +785,17 @@ public class JavaModelListener implements IElementChangedListener{
 											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
 											projectAndClassName = previousJavaProjectName + "." + className;							
 											
-											if(mapCu.containsKey(projectAndClassName)){
-												astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+											if(mapAST.containsKey(projectAndClassName)){
+												astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 												printAST(event);
-												mapCu.replace(projectAndClassName, astRootTemp);
+												mapAST.replace(projectAndClassName, astRootTemp);
+												
 											}
 											else{
 												astRootTemp = null;
 												printAST(event);
-												mapCu.put(projectAndClassName, astRootTemp);
+												mapAST.put(projectAndClassName, astRootTemp);
+												
 											}
 
 										}	
@@ -809,15 +863,17 @@ public class JavaModelListener implements IElementChangedListener{
 										className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
 										projectAndClassName = previousJavaProjectName + "." + className;							
 										
-										if(mapCu.containsKey(projectAndClassName)){
-											astRootTemp = (CompilationUnit) mapCu.get(projectAndClassName);
+										if(mapAST.containsKey(projectAndClassName)){
+											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 											printAST(event);
-											mapCu.replace(projectAndClassName, astRootTemp);
+											mapAST.replace(projectAndClassName, astRootTemp);
+											
 										}
 										else{
 											astRootTemp = null;
 											printAST(event);
-											mapCu.put(projectAndClassName, astRootTemp);
+											mapAST.put(projectAndClassName, astRootTemp);
+											
 										}	
 									}
 									
@@ -858,6 +914,8 @@ public class JavaModelListener implements IElementChangedListener{
 			}
 
 		}	
+	
+		
 		
 	}
 
@@ -1018,33 +1076,123 @@ public class JavaModelListener implements IElementChangedListener{
 	 */
 
 	
+	public static int x = 0;
+	
 	public static void print(ASTNode node) {
+		
+		
 		// return a list of structural property descriptor
 		 List properties= node.structuralPropertiesForType();
 		 for (Iterator iterator= properties.iterator(); iterator.hasNext();) {
 			 Object descriptor= iterator.next();
+			 	 
 			 if (descriptor instanceof SimplePropertyDescriptor) {
+				 
 				 SimplePropertyDescriptor simple= (SimplePropertyDescriptor)descriptor;
-				 Object value= node.getStructuralProperty(simple);		 		 
+				 Object value= node.getStructuralProperty(simple);		
+				
 				 int lineNumber;
-
+				 
 				 if(isTempLarger){
 					 lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
 				 }
+				 
 				 else{
 					 lineNumber = astRoot.getLineNumber(node.getStartPosition());	
 				 }
+				 
+				 lastLineNumber = lineNumber;
 
 				 printStatement(lineNumber, simple, value, node);
+				 	 
 				 
 			 } else if (descriptor instanceof ChildPropertyDescriptor) {
 				 ChildPropertyDescriptor child= (ChildPropertyDescriptor)descriptor;
 				 ASTNode childNode= (ASTNode)node.getStructuralProperty(child);
-				 if (childNode != null){
-					 print(childNode);
+				 if (childNode != null){	 
+					// this code is a bit messy. Will fix soon. 
+						
+					 
+					 Calendar cal = Calendar.getInstance();
+				     SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+
+					 if(child.getId().equals("body") || child.getId().equals("thenStatement") || child.getId().equals("elseStatement")){
+						 
+						 String str = mapValue.get(childNode.getParent().getNodeType());
+						 if(child.getId().equals("elseStatement")){
+							 str = "[ELSE_STATEMENT]";
+						 }
+						 
+						 int lineNumber;
+						 
+						 if(isTempLarger){
+							 lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
+						 }
+						 
+						 else{
+							 lineNumber = astRoot.getLineNumber(node.getStartPosition());	
+						 }	
+						 
+						 if(lineNumberCheck != 0){
+							 if(isTempLarger){
+								 stringArrayTemp.add(lineNumberCheck + " $ " + long2);
+								 stringArrayTempContent.add(long2);
+								 lineNumberCheck = 0;
+								 long2 = ""; 
+							 }
+							 else{
+								 stringArray.add(lineNumberCheck + " $ " + long2);
+								 stringArrayContent.add(long2);
+								 lineNumberCheck = 0;
+								 long2 = "";
+ 
+							 }
+						 }
+						 if(isTempLarger){
+							 stringArrayTemp.add(lineNumber + " $ OPEN " + str);
+							 stringArrayTempContent.add("OPEN " + str);	 
+						 }
+						 else{
+							 stringArray.add(lineNumber + " $ OPEN " + str);
+							 stringArrayContent.add("OPEN " + str);
+						 }
+						 			 
+						 print(childNode);
+						 
+						 if(lineNumberCheck != 0){
+							 if(isTempLarger){
+								 stringArrayTemp.add(lineNumberCheck + " $ " + long2);
+								 stringArrayTempContent.add(long2);
+								 lineNumberCheck = 0;
+								 long2 = ""; 
+							 }
+							 else{
+								 stringArray.add(lineNumberCheck + " $ " + long2);
+								 stringArrayContent.add(long2);
+								 lineNumberCheck = 0;
+								 long2 = "";
+							 }
+						 }
+						 
+						 if(isTempLarger){
+							 stringArrayTemp.add(lastLineNumber + " $ CLOSE " + str);
+							 stringArrayTempContent.add("CLOSE " + str);
+						 }
+						 else{
+							 stringArray.add(lastLineNumber + " $ CLOSE " + str);
+							 stringArrayContent.add("CLOSE " + str);
+						 }
+					 }
+					 
+					 else{
+						 print(childNode);
+					 }
+
+					 
 				 }
 			 } else {
 				 ChildListPropertyDescriptor list= (ChildListPropertyDescriptor)descriptor;
+			//	 System.out.println("List (" + list.getId() + ")");
 				 print((List)node.getStructuralProperty(list));
 			 }
 		 }
@@ -1067,8 +1215,17 @@ public class JavaModelListener implements IElementChangedListener{
 
 	public static void printStatement(int lineNumber, SimplePropertyDescriptor simple, Object value, ASTNode node){
 		
-		String str = mapValue.get(node.getParent().getNodeType());
+		String str;
 		String strValue;
+		String strSimple;
+		
+		if(node.getNodeType() == IMPORT_DECLARATION){
+			str = mapValue.get(node.getNodeType());
+		}
+		else{
+			str = mapValue.get(node.getParent().getNodeType());
+		}
+		
 		
 		// this prevents error from javadoc
 		if(value == null){
@@ -1078,12 +1235,8 @@ public class JavaModelListener implements IElementChangedListener{
 			strValue = value.toString();
 		}
 		
-		String strSimple = simple.getId();
-		
-		if(str == "[INFIX_EXPRESSION]" || str == "[VARIABLE_DECLARATION_EXPRESSION]"){
-			str = mapValue.get(node.getParent().getParent().getNodeType());
-		}
-	
+		strSimple = simple.getId();
+			
 		// remove the element name that is pretty much useless 
 		if(strSimple.equals("primitiveTypeCode") || strSimple.equals("identifier")){
 			strSimple = "";
@@ -1097,15 +1250,14 @@ public class JavaModelListener implements IElementChangedListener{
 			lineNumberCheck = lineNumber;
 		 }
 		else{
-			if(lineNumber != lineNumberCheck){				 
+			if(lineNumber != lineNumberCheck){		
+				 
 				if(isTempLarger){
 					stringArrayTemp.add(lineNumberCheck + " $ " + long2);
-					stringArrayTempLineNumber.add(lineNumberCheck);
 					stringArrayTempContent.add(long2);
 				}
 				else{
 					stringArray.add(lineNumberCheck + " $ " + long2); 
-					stringArrayLineNumber.add(lineNumberCheck);
 					stringArrayContent.add(long2); 
 				}	 
 				long2 = ""; 
@@ -1121,8 +1273,6 @@ public class JavaModelListener implements IElementChangedListener{
 	public void arrayClear(){
 		stringArray.clear();
 		stringArrayTemp.clear();
-		stringArrayLineNumber.clear();
-		stringArrayTempLineNumber.clear();
 		stringArrayContent.clear();
 		stringArrayTempContent.clear();
 		commentList.clear();
