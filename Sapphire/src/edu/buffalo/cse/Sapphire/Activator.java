@@ -11,9 +11,12 @@
 
 package edu.buffalo.cse.Sapphire;
 
+import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
+import org.eclipse.core.resources.IWorkspace;
+import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.jdt.core.JavaCore;
 import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.ui.IStartup;
@@ -47,7 +50,12 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
-		//JavaModelListener javaModel = new JavaModelListener();
+		
+		// IWorkspace workspace = ResourcesPlugin.getWorkspace();
+		// File workspaceDirectory = workspace.getRoot().getLocation().toFile();
+		// check the username in the database. Proceed if true, else do nothing
+		// System.out.println(workspaceDirectory);
+		
 		JavaCore.addElementChangedListener(JavaModelListener.getListener());
 		
 	}
@@ -58,10 +66,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 	 */
 	public void stop(BundleContext context) throws Exception {
 		plugin = null;
-		super.stop(context);
-		Calendar cal = Calendar.getInstance();
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-		System.out.println(sdf.format(cal.getTime()) + " [CLOSE PLUGIN]");
+		super.stop(context);	
 	}
 
 	/**
@@ -90,9 +95,10 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 		 workbench.getDisplay().asyncExec(new Runnable() {
 		   public void run() {
 		     IWorkbenchWindow window = workbench.getActiveWorkbenchWindow();
+		     
 		     if (window != null) {
 		       // do something
-		    	 JavaCore.addElementChangedListener(JavaModelListener.getListener());
+		       // JavaCore.addElementChangedListener(JavaModelListener.getListener());
 		     }
 		   }
 		 });
