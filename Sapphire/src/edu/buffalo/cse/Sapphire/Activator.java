@@ -50,12 +50,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 	public void start(BundleContext context) throws Exception {
 		super.start(context);
 		plugin = this;
-		
-		// IWorkspace workspace = ResourcesPlugin.getWorkspace();
-		// File workspaceDirectory = workspace.getRoot().getLocation().toFile();
-		// check the username in the database. Proceed if true, else do nothing
-		// System.out.println(workspaceDirectory);
-		
+	
 		JavaCore.addElementChangedListener(JavaModelListener.getListener());
 		
 	}

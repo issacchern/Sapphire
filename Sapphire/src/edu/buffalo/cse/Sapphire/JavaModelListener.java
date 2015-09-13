@@ -69,6 +69,7 @@ public class JavaModelListener implements IElementChangedListener{
 	private static String projectAndClassName = "";
 	private static boolean isTempLarger = false;
 	private static boolean visitJavaModel = false;
+	private static boolean enableRecording = false;
 	private static int lastLineNumber = 0;
 	private static int lineNumberCheck = 0;
 	private static HashMap<String, String> mapString = new HashMap<String, String>();
@@ -211,6 +212,25 @@ public class JavaModelListener implements IElementChangedListener{
 	 * @author Chern Yee Chua
 	 */
 	
+	@Override
+	public void elementChanged(ElementChangedEvent event) {	
+		
+		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
+			traverseAndPrintJavaModel(event.getDelta());
+		}
+		
+		else{
+			if(visitJavaModel == false){
+				traverseCompilationUnit(event);			
+			}
+			
+			else{
+				visitJavaModel = false;
+			}
+		}	
+	}
+	
+	
 	@SuppressWarnings("unchecked")
 	public static void parse(final String strA) {
 		ASTParser parserA = ASTParser.newParser(AST.JLS8);
@@ -326,7 +346,7 @@ public class JavaModelListener implements IElementChangedListener{
 		
 		try{
 			// When the user switch java file or project, cuTemp is expected to be null.
-			if(astRootTemp == null){			
+			if(astRootTemp == null && enableRecording){			
 				cuTemp = (ICompilationUnit) event.getDelta().getElement();
 				sourceTemp = cuTemp.getSource();
 				mapString.put(projectAndClassName, sourceTemp);
@@ -351,256 +371,260 @@ public class JavaModelListener implements IElementChangedListener{
 				}
 
 				for(int i = 0; i < stringArrayTemp.size(); i++){
+					
 					fwriter.write(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
 							stringArrayTemp.get(i) + "\n");
 					fwriter.flush();
 					
-				}
+				}	
 				
 				// handle comments and docs
-				parse(mapString.get(projectAndClassName));
+				parse(mapString.get(projectAndClassName));	
 				
 				for(int i = 0; i < commentListTemp.size(); i++){
 					fwriter.write(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
 							commentListTemp.get(i) + "\n");
 					fwriter.flush();
-				}
+				}	
+				
 				arrayClear();
 			}
 			
 			else{
-				cu = (ICompilationUnit) event.getDelta().getElement();				
-				source = cu.getSource();
-				ASTParser parser = ASTParser.newParser(AST.JLS8);
-				parser.setSource(cu);
-				parser.setKind(ASTParser.K_COMPILATION_UNIT);
-				parser.setResolveBindings(true);
-				astRoot = (CompilationUnit) parser.createAST(null);
-				
-				// parse the astRootTemp
-				isTempLarger = true;
-				long2 = "";
-				lineNumberCheck = 0;
-				print(astRootTemp);
-				
-				if(lineNumberCheck == 0 || long2.length() == 0){
-				}
-				else{
-					// add the last piece of element
-					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
-					stringArrayTempContent.add(long2);
-				}
-				
-				// reset the data and parse astRoot
-				long2 = "";	
-				lineNumberCheck = 0;			
-				isTempLarger = false; 
-				print(astRoot);
-				
-				if(lineNumberCheck == 0 || long2.length() == 0){
-				}
-				else{
-					// add the last piece of element
-					stringArray.add(lineNumberCheck + " $ " + long2);
-					stringArrayContent.add(long2);
-				}
+				if(enableRecording){
+					cu = (ICompilationUnit) event.getDelta().getElement();				
+					source = cu.getSource();
+					ASTParser parser = ASTParser.newParser(AST.JLS8);
+					parser.setSource(cu);
+					parser.setKind(ASTParser.K_COMPILATION_UNIT);
+					parser.setResolveBindings(true);
+					astRoot = (CompilationUnit) parser.createAST(null);
 					
-				// this algorithm marks the duplicate element with "duplicate" with the count at the end
-				// NOTE: this is for current unit
-				ArrayList<String> arr = new ArrayList<String>();	
-				int cnt = 0;
-				for(int i = 0 ; i < stringArray.size(); i++ ){
-					int index = stringArray.get(i).indexOf('$');
-					String stringSub = stringArray.get(i).substring(index);	
+					// parse the astRootTemp
+					isTempLarger = true;
+					long2 = "";
+					lineNumberCheck = 0;
+					print(astRootTemp);
 					
-					if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
-						// don't mark those cases with "duplicates"
+					if(lineNumberCheck == 0 || long2.length() == 0){
 					}
-					
 					else{
-						if(arr.contains(stringSub)){
-							cnt++;
-							stringArray.set(i, stringArray.get(i) + "(duplicate: " + cnt + " )");
-							stringArrayContent.set(i, stringSub.substring(2) + "(duplicate: " + cnt + " )");
-							arr.add(stringSub + "(duplicate: " + cnt + " )");
-						}
-						else{
-							arr.add(stringSub);
-						}	
-					}
-				}
-				
-				// this algorithm marks the duplicate element with "duplicate" with the count at the end
-				// NOTE: this is for previous unit
-				ArrayList<String> arrTemp = new ArrayList<String>();			
-				int cntTemp = 0;
-				for(int i = 0 ; i < stringArrayTemp.size(); i++ ){
-					int index = stringArrayTemp.get(i).indexOf('$');
-					String stringSub = stringArrayTemp.get(i).substring(index);	
-					
-					if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
-						// don't mark those cases with "duplicates"
+						// add the last piece of element
+						stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+						stringArrayTempContent.add(long2);
 					}
 					
+					// reset the data and parse astRoot
+					long2 = "";	
+					lineNumberCheck = 0;			
+					isTempLarger = false; 
+					print(astRoot);
+					
+					if(lineNumberCheck == 0 || long2.length() == 0){
+					}
 					else{
-						if(arrTemp.contains(stringSub)){
-							cntTemp++;
-							stringArrayTemp.set(i, stringArrayTemp.get(i) + "(duplicate: " + cntTemp + " )");
-							stringArrayTempContent.set(i, stringSub.substring(2) + "(duplicate: " + cntTemp + " )");
-							arrTemp.add(stringSub + "(duplicate: " + cntTemp + " )");
+						// add the last piece of element
+						stringArray.add(lineNumberCheck + " $ " + long2);
+						stringArrayContent.add(long2);
+					}
+						
+					// this algorithm marks the duplicate element with "duplicate" with the count at the end
+					// NOTE: this is for current unit
+					ArrayList<String> arr = new ArrayList<String>();	
+					int cnt = 0;
+					for(int i = 0 ; i < stringArray.size(); i++ ){
+						int index = stringArray.get(i).indexOf('$');
+						String stringSub = stringArray.get(i).substring(index);	
+						
+						if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
+							// don't mark those cases with "duplicates"
 						}
+						
 						else{
-							arrTemp.add(stringSub);
-						}	
-					}
-				}
-				
-				// clone another ArrayList for other usage
-				List<String> copyStringArray = new ArrayList<String>();
-				copyStringArray.addAll(stringArray);
-				
-				// clone another ArrayList for other usage
-				List<String> copyStringArrayTemp = new ArrayList<String>();
-				copyStringArrayTemp.addAll(stringArrayTemp);
-				
-				// remove duplicates in copyStringArray
-				Set<String> set1 = new HashSet<String>();
-				set1.addAll(stringArrayTemp);
-				Set<String> set2 = new HashSet<String>();
-				set2.addAll(stringArray);
-				set2.removeAll(set1);
-				
-				for(String s: stringArrayTemp){
-					copyStringArray.remove(s);
-				}
-												
-				// create another ArrayList with the duplicates removed
-				List<String> afterModificationAdded = new ArrayList<String>();
-				afterModificationAdded.addAll(copyStringArray);
-				
-				// remove duplicates in copyStringArrayTemp
-				Set<String> set12 = new HashSet<String>();
-				set12.addAll(stringArray);
-				Set<String> set22 = new HashSet<String>();
-				set22.addAll(stringArrayTemp);
-				set22.removeAll(set12);
-				
-				for(String s: stringArray){
-					copyStringArrayTemp.remove(s);
-				}
-
-				// create another ArrayList with the duplicates removed
-				List<String> afterModificationRemoved = new ArrayList<String>();
-				afterModificationRemoved.addAll(copyStringArrayTemp);
-				
-				// get the ArrayList with only the new elements added 
-				for(int i = 0 ; i < copyStringArray.size(); i++){
-					int index = copyStringArray.get(i).indexOf('$');
-					String stringSub = copyStringArray.get(i).substring(index); 
-					for(int j = 0; j < stringArrayTempContent.size(); j++){
-						if(stringArrayTempContent.get(j).equals(stringSub.substring(2))){
-							afterModificationAdded.remove(copyStringArray.get(i)); 
-							stringArrayTempContent.remove(stringArrayTempContent.get(j));
-							break;
+							if(arr.contains(stringSub)){
+								cnt++;
+								stringArray.set(i, stringArray.get(i) + "(duplicate: " + cnt + " )");
+								stringArrayContent.set(i, stringSub.substring(2) + "(duplicate: " + cnt + " )");
+								arr.add(stringSub + "(duplicate: " + cnt + " )");
+							}
+							else{
+								arr.add(stringSub);
+							}	
 						}
 					}
-				}
-				
-				// get the ArrayList with only the new elements added 
-				for(int i = 0 ; i < copyStringArrayTemp.size(); i++){
-					int index = copyStringArrayTemp.get(i).indexOf('$');
-					String stringSub = copyStringArrayTemp.get(i).substring(index); // the content 
-					for(int j = 0; j < stringArrayContent.size(); j++){		
-						if(stringArrayContent.get(j).equals(stringSub.substring(2))){
-							afterModificationRemoved.remove(copyStringArrayTemp.get(i));
-							stringArrayContent.remove(stringArrayContent.get(j));
-							break;
-						}											
-					}								
-				}
-				
-				// print out the time and the class name in certain amount of time
-				Calendar cal = Calendar.getInstance();
-		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-
-		        // display what new element is added 
-				for(int i = 0 ; i < afterModificationAdded.size(); i++){
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-							afterModificationAdded.get(i) + "\n");
-					fwriter.flush();
-				}
-				
-				// display what old element is removed
-				for(int i = 0 ; i < afterModificationRemoved.size(); i++){
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-							afterModificationRemoved.get(i) + "\n");
-					fwriter.flush();
-				}
-	
-				// retrieve the comment elements
-				isTempLarger = true;
-				parse(mapString.get(projectAndClassName));
-				isTempLarger = false;
-				parse(source);
-				
-				// clone ArrayList for other usage	
-				ArrayList<String> afterCommentAdded = new ArrayList<String>();
-				afterCommentAdded.addAll(commentList);
-				ArrayList<String> afterCommentRemoved = new ArrayList<String>();
-				afterCommentRemoved.addAll(commentListTemp);
-				
-				// get the ArrayList with only the new elements added 
-				for(int i = 0 ; i < commentList.size(); i++){
-					int index = commentList.get(i).indexOf('#');
-					String stringSub = commentList.get(i).substring(index); // the content 
-					for(int j = 0; j < commentListTempContent.size(); j++){
-						if(commentListTempContent.get(j).equals(stringSub.substring(2))){
-							afterCommentAdded.remove(commentList.get(i)); // you need to check again before you remove the element. 
-							commentListTempContent.remove(commentListTempContent.get(j));
-							break;
+					
+					// this algorithm marks the duplicate element with "duplicate" with the count at the end
+					// NOTE: this is for previous unit
+					ArrayList<String> arrTemp = new ArrayList<String>();			
+					int cntTemp = 0;
+					for(int i = 0 ; i < stringArrayTemp.size(); i++ ){
+						int index = stringArrayTemp.get(i).indexOf('$');
+						String stringSub = stringArrayTemp.get(i).substring(index);	
+						
+						if(stringSub.substring(2, 5).equals("OPE") || stringSub.substring(2,5).equals("CLO")){
+							// don't mark those cases with "duplicates"
+						}
+						
+						else{
+							if(arrTemp.contains(stringSub)){
+								cntTemp++;
+								stringArrayTemp.set(i, stringArrayTemp.get(i) + "(duplicate: " + cntTemp + " )");
+								stringArrayTempContent.set(i, stringSub.substring(2) + "(duplicate: " + cntTemp + " )");
+								arrTemp.add(stringSub + "(duplicate: " + cntTemp + " )");
+							}
+							else{
+								arrTemp.add(stringSub);
+							}	
 						}
 					}
-				}
-				
-				// get the ArrayList with only the new elements added 
-				for(int i = 0 ; i < commentListTemp.size(); i++){
-					int index = commentListTemp.get(i).indexOf('#');
-					String stringSub = commentListTemp.get(i).substring(index); // the content 
-					for(int j = 0; j < commentListContent.size(); j++){
-						if(commentListContent.get(j).equals(stringSub.substring(2))){
-							afterCommentRemoved.remove(commentListTemp.get(i));
-							commentListContent.remove(commentListContent.get(j));
-							break;
+					
+					// clone another ArrayList for other usage
+					List<String> copyStringArray = new ArrayList<String>();
+					copyStringArray.addAll(stringArray);
+					
+					// clone another ArrayList for other usage
+					List<String> copyStringArrayTemp = new ArrayList<String>();
+					copyStringArrayTemp.addAll(stringArrayTemp);
+					
+					// remove duplicates in copyStringArray
+					Set<String> set1 = new HashSet<String>();
+					set1.addAll(stringArrayTemp);
+					Set<String> set2 = new HashSet<String>();
+					set2.addAll(stringArray);
+					set2.removeAll(set1);
+					
+					for(String s: stringArrayTemp){
+						copyStringArray.remove(s);
+					}
+													
+					// create another ArrayList with the duplicates removed
+					List<String> afterModificationAdded = new ArrayList<String>();
+					afterModificationAdded.addAll(copyStringArray);
+					
+					// remove duplicates in copyStringArrayTemp
+					Set<String> set12 = new HashSet<String>();
+					set12.addAll(stringArray);
+					Set<String> set22 = new HashSet<String>();
+					set22.addAll(stringArrayTemp);
+					set22.removeAll(set12);
+					
+					for(String s: stringArray){
+						copyStringArrayTemp.remove(s);
+					}
+
+					// create another ArrayList with the duplicates removed
+					List<String> afterModificationRemoved = new ArrayList<String>();
+					afterModificationRemoved.addAll(copyStringArrayTemp);
+					
+					// get the ArrayList with only the new elements added 
+					for(int i = 0 ; i < copyStringArray.size(); i++){
+						int index = copyStringArray.get(i).indexOf('$');
+						String stringSub = copyStringArray.get(i).substring(index); 
+						for(int j = 0; j < stringArrayTempContent.size(); j++){
+							if(stringArrayTempContent.get(j).equals(stringSub.substring(2))){
+								afterModificationAdded.remove(copyStringArray.get(i)); 
+								stringArrayTempContent.remove(stringArrayTempContent.get(j));
+								break;
+							}
 						}
 					}
-				}
+					
+					// get the ArrayList with only the new elements added 
+					for(int i = 0 ; i < copyStringArrayTemp.size(); i++){
+						int index = copyStringArrayTemp.get(i).indexOf('$');
+						String stringSub = copyStringArrayTemp.get(i).substring(index); // the content 
+						for(int j = 0; j < stringArrayContent.size(); j++){		
+							if(stringArrayContent.get(j).equals(stringSub.substring(2))){
+								afterModificationRemoved.remove(copyStringArrayTemp.get(i));
+								stringArrayContent.remove(stringArrayContent.get(j));
+								break;
+							}											
+						}								
+					}
+					
+					// print out the time and the class name in certain amount of time
+					Calendar cal = Calendar.getInstance();
+			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+			        
+			        // display what new element is added 
+		        	for(int i = 0 ; i < afterModificationAdded.size(); i++){
+						fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
+								afterModificationAdded.get(i) + "\n");
+						fwriter.flush();
+					}	
+		        	
+		        	// display what old element is removed
+					for(int i = 0 ; i < afterModificationRemoved.size(); i++){
+						fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
+								afterModificationRemoved.get(i) + "\n");
+						fwriter.flush();
+					}
+		
+					// retrieve the comment elements
+					isTempLarger = true;
+					parse(mapString.get(projectAndClassName));
+					isTempLarger = false;
+					parse(source);
+					
+					// clone ArrayList for other usage	
+					ArrayList<String> afterCommentAdded = new ArrayList<String>();
+					afterCommentAdded.addAll(commentList);
+					ArrayList<String> afterCommentRemoved = new ArrayList<String>();
+					afterCommentRemoved.addAll(commentListTemp);
+					
+					// get the ArrayList with only the new elements added 
+					for(int i = 0 ; i < commentList.size(); i++){
+						int index = commentList.get(i).indexOf('#');
+						String stringSub = commentList.get(i).substring(index); // the content 
+						for(int j = 0; j < commentListTempContent.size(); j++){
+							if(commentListTempContent.get(j).equals(stringSub.substring(2))){
+								afterCommentAdded.remove(commentList.get(i)); // you need to check again before you remove the element. 
+								commentListTempContent.remove(commentListTempContent.get(j));
+								break;
+							}
+						}
+					}
+					
+					// get the ArrayList with only the new elements added 
+					for(int i = 0 ; i < commentListTemp.size(); i++){
+						int index = commentListTemp.get(i).indexOf('#');
+						String stringSub = commentListTemp.get(i).substring(index); // the content 
+						for(int j = 0; j < commentListContent.size(); j++){
+							if(commentListContent.get(j).equals(stringSub.substring(2))){
+								afterCommentRemoved.remove(commentListTemp.get(i));
+								commentListContent.remove(commentListContent.get(j));
+								break;
+							}
+						}
+					}
 
-				// display what new comment is added
-				for(int i = 0 ; i < afterCommentAdded.size(); i++){
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-							afterCommentAdded.get(i) + "\n");
-					fwriter.flush();
-				}
+					// display what new comment is added
+					for(int i = 0 ; i < afterCommentAdded.size(); i++){
+						fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
+								afterCommentAdded.get(i) + "\n");
+						fwriter.flush();
+					}
+					
+					// display what old comment is removed
+					for(int i = 0 ; i < afterCommentRemoved.size(); i++){
+						fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
+								afterCommentRemoved.get(i) + "\n");   
+						fwriter.flush();
+					}
+					
+					// remove all elements in those lists 
+					arrayClear();
 				
-				// display what old comment is removed
-				for(int i = 0 ; i < afterCommentRemoved.size(); i++){
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-							afterCommentRemoved.get(i) + "\n");   
-					fwriter.flush();
-				}
-				
-				// remove all elements in those lists 
-				arrayClear();
-			
-				// set the current CompilationUnit as previous one for next elementChanged event 
-				cuTemp = cu;			
-				sourceTemp = cuTemp.getSource();
-				mapString.replace(projectAndClassName, sourceTemp);
-				ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
-				parserTemp.setSource(cuTemp); 
-				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
-				parserTemp.setResolveBindings(true);
-				astRootTemp = (CompilationUnit) parserTemp.createAST(null);
+					// set the current CompilationUnit as previous one for next elementChanged event 
+					cuTemp = cu;			
+					sourceTemp = cuTemp.getSource();
+					mapString.replace(projectAndClassName, sourceTemp);
+					ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
+					parserTemp.setSource(cuTemp); 
+					parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
+					parserTemp.setResolveBindings(true);
+					astRootTemp = (CompilationUnit) parserTemp.createAST(null);			
+				}		
 			} 
 		}
 		
@@ -639,38 +663,60 @@ public class JavaModelListener implements IElementChangedListener{
 	 * @author Chern Yee Chua
 	 */
 	
-	@Override
-	public void elementChanged(ElementChangedEvent event) {	
-		
-		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
-			traverseAndPrint(event.getDelta());
-		}
-		
-		else{
-			if(visitJavaModel == false){
-				try{
-					if(event.getDelta().getElement().getJavaProject() != null){
-						if(previousJavaProjectName.equals("")){
-							// get the name of project and location
-							previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
-							fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
-							
-							// give permission to record data to the file 
-							reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");	
-							Calendar cal = Calendar.getInstance();
-					        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED] \n");
-							fwriter.flush();
-
-							if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
-								
-								if(event.getDelta().getCompilationUnitAST() != null && 
-										event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
-										event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+	public void traverseCompilationUnit(ElementChangedEvent event){
+		try{
+			if(event.getDelta().getElement().getJavaProject() != null){
+				if(previousJavaProjectName.equals("")){
+					// get the name of project and location
+					Calendar cal = Calendar.getInstance();
+			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+					previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
+					fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
 									
-									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
-									projectAndClassName = previousJavaProjectName + "." + className;
-	
+					File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");			
+					enableRecording = checkFile.exists();
+					
+					if(enableRecording){
+						reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
+						fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
+						fwriter.flush();	  
+					}
+					
+
+					if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
+						
+						if(event.getDelta().getCompilationUnitAST() != null && 
+								event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
+								event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+							
+							className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
+							projectAndClassName = previousJavaProjectName + "." + className;
+
+							if(mapAST.containsKey(projectAndClassName)){
+								astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+								printAST(event);
+								mapAST.replace(projectAndClassName, astRootTemp);
+							}
+							else{
+								astRootTemp = null;
+								printAST(event);
+								mapAST.put(projectAndClassName, astRootTemp);	
+							}
+						}
+					}
+				}
+				
+				else{
+					if(event.getDelta().getElement().getJavaProject().getProject().getName().equals(previousJavaProjectName)){
+
+						if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
+							if(event.getDelta().getCompilationUnitAST() != null && 
+									event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
+									event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+								if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName().
+										equals(className)){
+									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+									projectAndClassName = previousJavaProjectName + "." + className;							
 									if(mapAST.containsKey(projectAndClassName)){
 										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 										printAST(event);
@@ -679,169 +725,155 @@ public class JavaModelListener implements IElementChangedListener{
 									else{
 										astRootTemp = null;
 										printAST(event);
-										mapAST.put(projectAndClassName, astRootTemp);	
+										mapAST.put(projectAndClassName, astRootTemp);
 									}
 								}
-							}
-						}
-						
-						else{
-							if(event.getDelta().getElement().getJavaProject().getProject().getName().equals(previousJavaProjectName)){
-
-								if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
-									if(event.getDelta().getCompilationUnitAST() != null && 
-											event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
-											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
-										if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName().
-												equals(className)){
-											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-											projectAndClassName = previousJavaProjectName + "." + className;							
-											if(mapAST.containsKey(projectAndClassName)){
-												astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-												printAST(event);
-												mapAST.replace(projectAndClassName, astRootTemp);
-											}
-											else{
-												astRootTemp = null;
-												printAST(event);
-												mapAST.put(projectAndClassName, astRootTemp);
-											}
-										}
-										
-										else{	
-											Calendar cal = Calendar.getInstance();
-									        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-											fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT CHANGED TO " + 
-													event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName()
-													+ "]\n");
-											fwriter.flush();
-											className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-											projectAndClassName = previousJavaProjectName + "." + className;							
-											
-											if(mapAST.containsKey(projectAndClassName)){
-												astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-												printAST(event);
-												mapAST.replace(projectAndClassName, astRootTemp);
-												
-											}
-											else{
-												astRootTemp = null;
-												printAST(event);
-												mapAST.put(projectAndClassName, astRootTemp);
-											}
-										}	
-									}
+								
+								else{	
+									Calendar cal = Calendar.getInstance();
+							        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+									fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT CHANGED TO " + 
+											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName()
+											+ "]\n");
+									fwriter.flush();
+									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+									projectAndClassName = previousJavaProjectName + "." + className;							
 									
-									else{
-										Calendar cal = Calendar.getInstance();
-								        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");			
-										ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
-										ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
-										parserCheck.setSource(cuCheck); 
-										parserCheck.setKind(ASTParser.K_COMPILATION_UNIT);
-										parserCheck.setResolveBindings(true);
-										ASTNode astCheck = (CompilationUnit) parserCheck.createAST(null);
+									if(mapAST.containsKey(projectAndClassName)){
+										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+										printAST(event);
+										mapAST.replace(projectAndClassName, astRootTemp);
 										
-										if(astCheck.toString().length() == 0){								
-											fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
-											fwriter.flush();
-											
-											if(astRootTemp != null){
-												isTempLarger = true;
-												long2 = "";
-												lineNumberCheck = 0;
-												print(astRootTemp);
-												stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
-																							
-												for(int i = 0 ; i < stringArrayTemp.size(); i ++){
-													fwriter.write(sdf.format(cal.getTime()) + " [LINE REMOVED (" + className + ")]: " + 
-															stringArrayTemp.get(i) + "\n");
-													fwriter.flush();
-												}	
-												stringArrayTemp.clear();	
-											}
-											
-											className = "";
-											astRootTemp = null; 
-
-										} else{
-											// we hope the user would not do something too crazy at this point
-											fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE\n");
-											fwriter.flush();
-											className = "";
-											astRootTemp = null; 
-										}
 									}
-								}
+									else{
+										astRootTemp = null;
+										printAST(event);
+										mapAST.put(projectAndClassName, astRootTemp);
+									}
+								}	
 							}
 							
 							else{
 								Calendar cal = Calendar.getInstance();
-						        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-								fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-								fwriter.flush();
-								fwriter.close();
+						        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");			
+								ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
+								ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
+								parserCheck.setSource(cuCheck); 
+								parserCheck.setKind(ASTParser.K_COMPILATION_UNIT);
+								parserCheck.setResolveBindings(true);
+								ASTNode astCheck = (CompilationUnit) parserCheck.createAST(null);
 								
-								previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
-								fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
-								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-								fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-								fwriter.flush();
-								if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
-									if(event.getDelta().getCompilationUnitAST() != null && 
-											event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
-											event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
-										className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-										projectAndClassName = previousJavaProjectName + "." + className;							
-										
-										if(mapAST.containsKey(projectAndClassName)){
-											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-											printAST(event);
-											mapAST.replace(projectAndClassName, astRootTemp);	
-										}
-										else{
-											astRootTemp = null;
-											printAST(event);
-											mapAST.put(projectAndClassName, astRootTemp);
+								if(astCheck.toString().length() == 0){								
+									fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
+									fwriter.flush();
+									
+									if(astRootTemp != null){
+										isTempLarger = true;
+										long2 = "";
+										lineNumberCheck = 0;
+										print(astRootTemp);
+										stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
+																					
+										for(int i = 0 ; i < stringArrayTemp.size(); i ++){
+											fwriter.write(sdf.format(cal.getTime()) + " [LINE REMOVED (" + className + ")]: " + 
+													stringArrayTemp.get(i) + "\n");
+											fwriter.flush();
 										}	
+										stringArrayTemp.clear();	
 									}
 									
-									else{															
-										ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
-										ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
-										parserCheck.setSource(cuCheck); 
-										parserCheck.setKind(ASTParser.K_COMPILATION_UNIT);
-										parserCheck.setResolveBindings(true);
-										ASTNode astCheck = (CompilationUnit) parserCheck.createAST(null);
-										
-										if(astCheck.toString().length() == 0){						
-											fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
-											fwriter.flush();
-											className = "";											
-											astRootTemp = null;
-		
-										} else{
-											fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE\n");
-											fwriter.flush();
-											className = "";	
-											astRootTemp = null;
-										}
-									}
+									className = "";
+									astRootTemp = null; 
+
+								} else{
+									// we hope the user would not do something too crazy at this point
+									fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE\n");
+									fwriter.flush();
+									className = "";
+									astRootTemp = null; 
 								}
 							}
 						}
 					}
+					
+					else{
+						Calendar cal = Calendar.getInstance();
+				        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+				        if(enableRecording){
+				        	fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
+							fwriter.flush();
+							fwriter.close();	
+				        	
+				        }
+						
+						
+						previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
+						fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
+		
+						File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+						enableRecording = checkFile.exists();
+						if(enableRecording){
+							reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
+							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
+							fwriter.flush();	  
+						}
+						
+						
+						if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
+							if(event.getDelta().getCompilationUnitAST() != null && 
+									event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
+									event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+								className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
+								projectAndClassName = previousJavaProjectName + "." + className;							
+								
+								if(mapAST.containsKey(projectAndClassName)){
+									astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+									printAST(event);
+									mapAST.replace(projectAndClassName, astRootTemp);	
+								}
+								else{
+									astRootTemp = null;
+									printAST(event);
+									mapAST.put(projectAndClassName, astRootTemp);
+								}	
+							}
 							
-				}catch(Exception e){
-					e.printStackTrace();
+							else{															
+								ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
+								ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
+								parserCheck.setSource(cuCheck); 
+								parserCheck.setKind(ASTParser.K_COMPILATION_UNIT);
+								parserCheck.setResolveBindings(true);
+								ASTNode astCheck = (CompilationUnit) parserCheck.createAST(null);
+								
+								if(astCheck.toString().length() == 0){						
+									fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
+									fwriter.flush();
+									className = "";											
+									astRootTemp = null;
+
+								} else{
+									fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: INVALID CLASS NAME OR MISSING CLASS TYPE\n");
+									fwriter.flush();
+									className = "";	
+									astRootTemp = null;
+								}
+							}
+						}
+					}
 				}
 			}
-			
-			else{
-				visitJavaModel = false;;
-			}
-		}	
+					
+		}catch(Exception e){
+			e.printStackTrace();
+		}
+		
+		
 	}
+	
+	
+	
+
 
 	public static IElementChangedListener getListener() {
 		return _listener;
@@ -854,7 +886,7 @@ public class JavaModelListener implements IElementChangedListener{
 	 * @author Chern Yee Chua
 	 */
 	
-	public void traverseAndPrint(IJavaElementDelta delta){
+	public void traverseAndPrintJavaModel(IJavaElementDelta delta){
         try{
         	switch (delta.getKind()) {
             case IJavaElementDelta.ADDED:  	
@@ -872,9 +904,14 @@ public class JavaModelListener implements IElementChangedListener{
     		        if(previousJavaProjectName.equals("")){
     		        	previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
     					fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
-    					reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-    					fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-    					fwriter.flush();
+    					
+    					File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+    					enableRecording = checkFile.exists();
+    					if(enableRecording){
+    						reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
+    						fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
+    						fwriter.flush();	  
+    					}
     		        }
     		        
     		        else{
@@ -883,17 +920,29 @@ public class JavaModelListener implements IElementChangedListener{
     		        	}
     		        	
     		        	else{
-    		        		fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-    		        		fwriter.flush();
+    		        		
     		        		
     						try {
-    							fwriter.flush();
-    							fwriter.close();
+    							if(enableRecording){
+    								fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
+        							fwriter.flush();
+        							fwriter.close();	
+    							}
+    							
     							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
     							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
-    							reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-    							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-    							fwriter.flush();
+
+
+    							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+    							enableRecording = checkFile.exists();
+    							if(enableRecording){
+    								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
+        							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
+        							fwriter.flush();	  
+    							}
+    							
+    							
+    							
     						} catch (IOException e) {
     							e.printStackTrace();
     						} 
@@ -945,19 +994,29 @@ public class JavaModelListener implements IElementChangedListener{
     	        	}
     	        	
     	        	else{
-    	        		fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-    	        		fwriter.flush();
+    	        		
+    	        		
     					try {
-    						fwriter.flush();
-    						fwriter.close();
+    						if(enableRecording){
+    							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
+        						fwriter.flush();
+        						fwriter.close();	
+    						}
+    						
     						if(delta.getElement().getJavaProject() != null &&
     							delta.getElement().getJavaProject().getProject() != null &&
     							delta.getElement().getJavaProject().getProject().getLocation() != null){
     							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
     							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
-    							reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");	
-    							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");	
-    							fwriter.flush();
+    							
+    							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+    							enableRecording = checkFile.exists();
+    							if(enableRecording){
+    								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
+        							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
+        							fwriter.flush();	  
+    							}
+    							
     						}
 
     					} catch (IOException e) {
@@ -999,7 +1058,7 @@ public class JavaModelListener implements IElementChangedListener{
             
             IJavaElementDelta[] children = delta.getAffectedChildren();
             for (int i = 0; i < children.length; i++) {
-            	traverseAndPrint(children[i]);
+            	traverseAndPrintJavaModel(children[i]);
             }
         	
         }catch(Exception e){
