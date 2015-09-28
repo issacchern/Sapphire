@@ -11,10 +11,8 @@
 package edu.buffalo.cse.Sapphire;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -29,18 +27,14 @@ import static org.eclipse.jdt.core.IJavaElement.JAVA_PROJECT;
 import static org.eclipse.jdt.core.IJavaElement.COMPILATION_UNIT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT_ROOT;
-
-
 import static org.eclipse.jdt.core.dom.ASTNode.IMPORT_DECLARATION;
-
-
 
 
 import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IElementChangedListener;
 import org.eclipse.jdt.core.IJavaElementDelta;
-import org.eclipse.jdt.core.JavaModelException;
+import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
 import org.eclipse.jdt.core.dom.ASTParser;
@@ -53,6 +47,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
+
 
 /**
  * This class handles all the changes to the JavaModel, recording all of
@@ -203,6 +198,48 @@ public class JavaModelListener implements IElementChangedListener{
         
 	}
 	
+	
+	public boolean error_checking(ElementChangedEvent event){
+		
+		if (event.getDelta().getCompilationUnitAST().getProblems().length > 0){
+			boolean true_or_false = true;
+			
+			for (IProblem problem : (event.getDelta().getCompilationUnitAST().getProblems())){
+				if (problem.isError()){
+					true_or_false = false;
+					if(enableRecording){
+						
+						Calendar cal = Calendar.getInstance();
+				        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+						
+				        try {
+				        	fwriter.write(sdf.format(cal.getTime()) + " [ERROR DETECTED(" + className + ")]: " +
+				        			problem.getSourceLineNumber() + " * " + problem.getMessage() + "\n");
+							fwriter.flush();		
+							
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					}
+					
+				}
+			}
+
+			return true_or_false;	
+				
+					
+		}
+		
+		else{
+			return true;	
+		}
+		
+		
+	}
+	
+	
+	
+	
 	/**
 	 * Method parse() takes string source of CompilationUnit and store the visiting
 	 * node into ArrayList. Since Comment node is not part of the ASTNode structure,
@@ -218,12 +255,11 @@ public class JavaModelListener implements IElementChangedListener{
 		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
 			traverseAndPrintJavaModel(event.getDelta());
 		}
-		
 		else{
-			if(visitJavaModel == false){
-				traverseCompilationUnit(event);			
-			}
 			
+			if(visitJavaModel == false){	
+				traverseCompilationUnit(event);							
+			}		
 			else{
 				visitJavaModel = false;
 			}
@@ -666,13 +702,19 @@ public class JavaModelListener implements IElementChangedListener{
 	public void traverseCompilationUnit(ElementChangedEvent event){
 		try{
 			if(event.getDelta().getElement().getJavaProject() != null){
+				/*
+				 * When the plugin starts, the previousJavaProjectName will be empty.
+				 * This if_statement is expected to run only once when the eclipse starts.
+				 */
+				
 				if(previousJavaProjectName.equals("")){
 					// get the name of project and location
 					Calendar cal = Calendar.getInstance();
 			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 					previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
 					fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
-									
+					
+					// check whether the plugin should record the data
 					File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");			
 					enableRecording = checkFile.exists();
 					
@@ -682,6 +724,11 @@ public class JavaModelListener implements IElementChangedListener{
 						fwriter.flush();	  
 					}
 					
+					/*
+					 * If the element changed event type is COMPILATION_UNIT,
+					 * we check whether there is any error in the editor. If there
+					 * is error, then we skip the printing AST part.
+					 */
 
 					if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
 						
@@ -691,44 +738,77 @@ public class JavaModelListener implements IElementChangedListener{
 							
 							className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
 							projectAndClassName = previousJavaProjectName + "." + className;
+							
+							boolean no_error = error_checking(event);
 
-							if(mapAST.containsKey(projectAndClassName)){
-								astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-								printAST(event);
-								mapAST.replace(projectAndClassName, astRootTemp);
+							if(no_error){
+								
+								/*
+								 * Check if the project together with class name already exists in the system,
+								 * if there exists, then the astRootTemp will be the previous one that we stored. 
+								 * Else, it will initialize a new instance and put in the map.
+								 * We expect the else statement will only be triggered the maximum number of 
+								 * java classes in the project.
+								 */
+							
+								if(mapAST.containsKey(projectAndClassName)){
+									astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+									
+									printAST(event);
+									mapAST.replace(projectAndClassName, astRootTemp);
+								}
+								else{
+									astRootTemp = null;
+									printAST(event);
+									mapAST.put(projectAndClassName, astRootTemp);	
+								}	
 							}
-							else{
-								astRootTemp = null;
-								printAST(event);
-								mapAST.put(projectAndClassName, astRootTemp);	
-							}
+							
+							
 						}
 					}
 				}
 				
+				
+				
 				else{
+					/*
+					 * When the user is still working on the same Java project, we check whether  
+					 * the COMPILATION_UNIT is valid and also check for switching java file cases.
+					 */
 					if(event.getDelta().getElement().getJavaProject().getProject().getName().equals(previousJavaProjectName)){
 
 						if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
+							
+							// if the COMPILATION_UNIT is normal
 							if(event.getDelta().getCompilationUnitAST() != null && 
 									event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
 									event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
+								
+								// this if_statement checks whether the user is working on the same java file or not
 								if(event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName().
 										equals(className)){
 									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-									projectAndClassName = previousJavaProjectName + "." + className;							
-									if(mapAST.containsKey(projectAndClassName)){
-										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-										printAST(event);
-										mapAST.replace(projectAndClassName, astRootTemp);
+									projectAndClassName = previousJavaProjectName + "." + className;
+									
+									boolean no_error = error_checking(event);
+
+									if(no_error){
+										if(mapAST.containsKey(projectAndClassName)){
+											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+											printAST(event);
+											mapAST.replace(projectAndClassName, astRootTemp);
+										}
+										else{
+											astRootTemp = null;
+											printAST(event);
+											mapAST.put(projectAndClassName, astRootTemp);
+										}		
 									}
-									else{
-										astRootTemp = null;
-										printAST(event);
-										mapAST.put(projectAndClassName, astRootTemp);
-									}
+
 								}
 								
+								// the user switches to another java class file
 								else{	
 									Calendar cal = Calendar.getInstance();
 							        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
@@ -737,22 +817,30 @@ public class JavaModelListener implements IElementChangedListener{
 											+ "]\n");
 									fwriter.flush();
 									className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-									projectAndClassName = previousJavaProjectName + "." + className;							
+									projectAndClassName = previousJavaProjectName + "." + className;
 									
-									if(mapAST.containsKey(projectAndClassName)){
-										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-										printAST(event);
-										mapAST.replace(projectAndClassName, astRootTemp);
-										
+									boolean no_error = error_checking(event);
+
+									if(no_error){
+										if(mapAST.containsKey(projectAndClassName)){
+											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+											printAST(event);
+											mapAST.replace(projectAndClassName, astRootTemp);
+											
+										}
+										else{
+											astRootTemp = null;
+											printAST(event);
+											mapAST.put(projectAndClassName, astRootTemp);
+										}	
 									}
-									else{
-										astRootTemp = null;
-										printAST(event);
-										mapAST.put(projectAndClassName, astRootTemp);
-									}
+									
+									
 								}	
 							}
 							
+							// this else_statement is triggered when the COMPILATION_UNIT is either empty or 
+							// class type name is invalid 
 							else{
 								Calendar cal = Calendar.getInstance();
 						        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");			
@@ -796,6 +884,11 @@ public class JavaModelListener implements IElementChangedListener{
 						}
 					}
 					
+					/*
+					 * This is the case when user switches to another Java Project. 
+					 * Close previous file writer and reinitialize new file writer (check if .sapphire exists)
+					 * Procedure is same as the previous case.
+					 */
 					else{
 						Calendar cal = Calendar.getInstance();
 				        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
@@ -820,24 +913,33 @@ public class JavaModelListener implements IElementChangedListener{
 						
 						
 						if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){
+							
+							// the normal case
 							if(event.getDelta().getCompilationUnitAST() != null && 
 									event.getDelta().getCompilationUnitAST().getTypeRoot() != null &&
 									event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType() != null){
 								className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();				
-								projectAndClassName = previousJavaProjectName + "." + className;							
+								projectAndClassName = previousJavaProjectName + "." + className;
 								
-								if(mapAST.containsKey(projectAndClassName)){
-									astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
-									printAST(event);
-									mapAST.replace(projectAndClassName, astRootTemp);	
+								boolean no_error = error_checking(event);
+
+								if(no_error){
+									if(mapAST.containsKey(projectAndClassName)){
+										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
+										printAST(event);
+										mapAST.replace(projectAndClassName, astRootTemp);	
+									}
+									else{
+										astRootTemp = null;
+										printAST(event);
+										mapAST.put(projectAndClassName, astRootTemp);
+									}		
 								}
-								else{
-									astRootTemp = null;
-									printAST(event);
-									mapAST.put(projectAndClassName, astRootTemp);
-								}	
+								
+								
 							}
 							
+							// the crazy case
 							else{															
 								ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
 								ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
@@ -1088,6 +1190,12 @@ public class JavaModelListener implements IElementChangedListener{
 				 else{
 					 lineNumber = astRoot.getLineNumber(node.getStartPosition());	
 				 }
+				 
+				 
+				 
+			
+				 
+				 
 				 lastLineNumber = lineNumber;
 				 printStatement(lineNumber, simple, value, node);
 
@@ -1188,7 +1296,7 @@ public class JavaModelListener implements IElementChangedListener{
 		
 		// this prevents error from javadoc
 		if(value == null){
-			strValue = "";
+			strValue = "null";
 		}
 		else{
 			strValue = value.toString();
@@ -1203,6 +1311,8 @@ public class JavaModelListener implements IElementChangedListener{
 		else{
 			strSimple = strSimple + " ";
 		}
+
+		
 		
 		if(lineNumberCheck == 0){
 			long2 += str + " " + strSimple + "(" + strValue + ") | ";	
