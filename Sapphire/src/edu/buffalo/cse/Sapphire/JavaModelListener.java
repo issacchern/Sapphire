@@ -1,4 +1,5 @@
 /**
+
  * This file is part of Sapphire.
  * 
  * Sapphire is a free plugin software, licensed under the terms of the 
@@ -19,6 +20,7 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
 
@@ -28,7 +30,6 @@ import static org.eclipse.jdt.core.IJavaElement.COMPILATION_UNIT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT;
 import static org.eclipse.jdt.core.IJavaElement.PACKAGE_FRAGMENT_ROOT;
 import static org.eclipse.jdt.core.dom.ASTNode.IMPORT_DECLARATION;
-
 
 import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
@@ -47,6 +48,8 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
+
+import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 
 
 /**
@@ -67,25 +70,28 @@ public class JavaModelListener implements IElementChangedListener{
 	private static boolean enableRecording = false;
 	private static int lastLineNumber = 0;
 	private static int lineNumberCheck = 0;
-	private static HashMap<String, String> mapString = new HashMap<String, String>();
-	private static HashMap<String, ASTNode> mapAST = new HashMap<String, ASTNode>();
-	private static HashMap<Integer, String> mapValue;
+	private static HashMap<String, String> mapComment = new HashMap<String, String>(); // for comment blocks
+	private static HashMap<String, ASTNode> mapAST = new HashMap<String, ASTNode>(); // for ASTNode
+	private static HashMap<Integer, String> mapValue; // for node type
 	private FileWriter fwriter;
 	private static IElementChangedListener _listener = new JavaModelListener();
 	private ICompilationUnit cuTemp;	
-	private String sourceTemp;
+	private static String sourceTemp;
 	private static CompilationUnit astRootTemp;
 	private ICompilationUnit cu;
-	private String source;
+	private static String source;
 	private static CompilationUnit astRoot;
 	private static List<String> stringArray = new ArrayList<String>();
 	private static List<String> stringArrayContent = new ArrayList<String>();
+	private static List<Integer> stringArrayNumber = new ArrayList<Integer>();
 	private static List<String> stringArrayTemp = new ArrayList<String>();
 	private static List<String> stringArrayTempContent = new ArrayList<String>();
+	private static List<Integer> stringArrayTempNumber = new ArrayList<Integer>();
 	private static List<String> commentList = new ArrayList<String>();
 	private static List<String> commentListContent = new ArrayList<String>();
 	private static List<String> commentListTemp = new ArrayList<String>();
 	private static List<String> commentListTempContent = new ArrayList<String>();
+
 	
 	/**
 	 * The constructor records how many times the plugin has triggered into
@@ -208,36 +214,28 @@ public class JavaModelListener implements IElementChangedListener{
 				if (problem.isError()){
 					true_or_false = false;
 					if(enableRecording){
-						
-						Calendar cal = Calendar.getInstance();
-				        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-						
-				        try {
+						String str = problem.getSourceLineNumber() + " * " + problem.getMessage();
+						try {
+							Calendar cal = Calendar.getInstance();
+					        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 				        	fwriter.write(sdf.format(cal.getTime()) + " [ERROR DETECTED(" + className + ")]: " +
-				        			problem.getSourceLineNumber() + " * " + problem.getMessage() + "\n");
+				        			str + "\n");
 							fwriter.flush();		
 							
 						} catch (IOException e) {
 							e.printStackTrace();
-						}
+						}	
 					}
-					
 				}
 			}
 
-			return true_or_false;	
-				
-					
+			return true_or_false;				
 		}
 		
 		else{
 			return true;	
 		}
-		
-		
 	}
-	
-	
 	
 	
 	/**
@@ -251,6 +249,7 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	@Override
 	public void elementChanged(ElementChangedEvent event) {	
+		
 		
 		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
 			traverseAndPrintJavaModel(event.getDelta());
@@ -385,7 +384,7 @@ public class JavaModelListener implements IElementChangedListener{
 			if(astRootTemp == null && enableRecording){			
 				cuTemp = (ICompilationUnit) event.getDelta().getElement();
 				sourceTemp = cuTemp.getSource();
-				mapString.put(projectAndClassName, sourceTemp);
+				mapComment.put(projectAndClassName, sourceTemp);
 				ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
 				parserTemp.setSource(cuTemp); 
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -406,16 +405,22 @@ public class JavaModelListener implements IElementChangedListener{
 					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
 				}
 
-				for(int i = 0; i < stringArrayTemp.size(); i++){
-					
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
-							stringArrayTemp.get(i) + "\n");
-					fwriter.flush();
-					
-				}	
+				fwriter.write(sdf.format(cal.getTime()) + " [SOURCE FILE INITIALIZED] \n");
+				fwriter.flush();
+				
+
+				// write to another recorded file specifically for the source file only
+				File newFileInitial = new File(fileNameAndLocation + "/." + previousJavaProjectName + "_source" +".RECORDING");
+				FileWriter fwriterInitial = new FileWriter(newFileInitial, true);
+				fwriterInitial.write(sdf.format(cal.getTime()) + " [" + className + "] \n--------------------"
+						+ "-------------------------------\n" 
+						+ astRootTemp.toString() + "\n"); 
+				fwriterInitial.flush();
+				fwriterInitial.close();
+				
 				
 				// handle comments and docs
-				parse(mapString.get(projectAndClassName));	
+				parse(mapComment.get(projectAndClassName));	
 				
 				for(int i = 0; i < commentListTemp.size(); i++){
 					fwriter.write(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
@@ -428,6 +433,10 @@ public class JavaModelListener implements IElementChangedListener{
 			
 			else{
 				if(enableRecording){
+					
+					Calendar cal = Calendar.getInstance();
+			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+					
 					cu = (ICompilationUnit) event.getDelta().getElement();				
 					source = cu.getSource();
 					ASTParser parser = ASTParser.newParser(AST.JLS8);
@@ -435,6 +444,50 @@ public class JavaModelListener implements IElementChangedListener{
 					parser.setKind(ASTParser.K_COMPILATION_UNIT);
 					parser.setResolveBindings(true);
 					astRoot = (CompilationUnit) parser.createAST(null);
+					
+					
+					// this section uses diff_match_patch algorithm to extract the differences of two ASTNode
+					
+					diff_match_patch dmp = new diff_match_patch();
+					LinkedList<Diff> df = dmp.diff_lines_only(astRootTemp.toString(),astRoot.toString());
+					
+					ArrayList<String> a1 = new ArrayList<String>();
+			    	ArrayList<String> a2 = new ArrayList<String>();
+			    	
+					for(int i = 0; i < df.size(); i++){
+						String df_string = df.get(i).toString();
+						String temp_df_string = df_string.substring(9,df_string.length() - 1).replaceAll("  ", "").
+		    					replaceAll("\t","");
+			    		if(df_string.substring(0, 6).equals("INSERT") && df_string.length() > 8 ){
+			    			a1.add(temp_df_string);
+			    			
+			    		}
+			    		else if(df_string.substring(0, 6).equals("DELETE") && df_string.length() > 8 ){
+			    			a2.add(temp_df_string);
+			    		}
+			    	}
+					
+			    	for(int i = 0; i < a1.size();i++){	
+			    		
+			    		String[] lines = a1.get(i).split("\r\n|\r|\n");
+						for (String line : lines) {					    
+						    fwriter.write(sdf.format(cal.getTime()) +  " [INSERT]: " + 
+									line + "\n");
+							fwriter.flush();   
+						}
+			    			
+			    	}
+			    		    			    	
+			    	for(int i = 0; i < a2.size();i++){		
+			    		String[] lines = a2.get(i).split("\r\n|\r|\n");
+						for (String line : lines) {
+				    		fwriter.write(sdf.format(cal.getTime()) +  " [DELETE]: " + 
+									line + "\n");
+							fwriter.flush();		
+						}    		    		
+			    	}
+			    	
+					// end of diff_match_patch algorithm 
 					
 					// parse the astRootTemp
 					isTempLarger = true;
@@ -446,6 +499,7 @@ public class JavaModelListener implements IElementChangedListener{
 					}
 					else{
 						// add the last piece of element
+						stringArrayTempNumber.add(lineNumberCheck);
 						stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
 						stringArrayTempContent.add(long2);
 					}
@@ -460,6 +514,7 @@ public class JavaModelListener implements IElementChangedListener{
 					}
 					else{
 						// add the last piece of element
+						stringArrayNumber.add(lineNumberCheck);
 						stringArray.add(lineNumberCheck + " $ " + long2);
 						stringArrayContent.add(long2);
 					}
@@ -579,8 +634,7 @@ public class JavaModelListener implements IElementChangedListener{
 					}
 					
 					// print out the time and the class name in certain amount of time
-					Calendar cal = Calendar.getInstance();
-			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+					
 			        
 			        // display what new element is added 
 		        	for(int i = 0 ; i < afterModificationAdded.size(); i++){
@@ -595,10 +649,11 @@ public class JavaModelListener implements IElementChangedListener{
 								afterModificationRemoved.get(i) + "\n");
 						fwriter.flush();
 					}
+
 		
 					// retrieve the comment elements
 					isTempLarger = true;
-					parse(mapString.get(projectAndClassName));
+					parse(mapComment.get(projectAndClassName));
 					isTempLarger = false;
 					parse(source);
 					
@@ -654,7 +709,7 @@ public class JavaModelListener implements IElementChangedListener{
 					// set the current CompilationUnit as previous one for next elementChanged event 
 					cuTemp = cu;			
 					sourceTemp = cuTemp.getSource();
-					mapString.replace(projectAndClassName, sourceTemp);
+					mapComment.replace(projectAndClassName, sourceTemp);
 					ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
 					parserTemp.setSource(cuTemp); 
 					parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -1190,11 +1245,8 @@ public class JavaModelListener implements IElementChangedListener{
 				 else{
 					 lineNumber = astRoot.getLineNumber(node.getStartPosition());	
 				 }
-				 
-				 
-				 
-			
-				 
+
+				
 				 
 				 lastLineNumber = lineNumber;
 				 printStatement(lineNumber, simple, value, node);
@@ -1202,7 +1254,11 @@ public class JavaModelListener implements IElementChangedListener{
 			 } else if (descriptor instanceof ChildPropertyDescriptor) {
 				 ChildPropertyDescriptor child= (ChildPropertyDescriptor)descriptor;
 				 ASTNode childNode= (ASTNode)node.getStructuralProperty(child);
-				 if (childNode != null){	 
+				 if (childNode != null){	
+					 
+					// print(childNode);
+					 
+					 
 
 					 if(child.getId().equals("body") || child.getId().equals("thenStatement") 
 							 || child.getId().equals("elseStatement")){
@@ -1260,6 +1316,8 @@ public class JavaModelListener implements IElementChangedListener{
 					 else{
 						 print(childNode);
 					 }
+					 
+					 
 				 }
 			 } else {
 				 ChildListPropertyDescriptor list= (ChildListPropertyDescriptor)descriptor;
@@ -1322,10 +1380,12 @@ public class JavaModelListener implements IElementChangedListener{
 			if(lineNumber != lineNumberCheck){		
 				 
 				if(isTempLarger){
+					stringArrayTempNumber.add(lineNumberCheck);
 					stringArrayTemp.add(lineNumberCheck + " $ " + long2);
 					stringArrayTempContent.add(long2);
 				}
 				else{
+					stringArrayNumber.add(lineNumberCheck);
 					stringArray.add(lineNumberCheck + " $ " + long2); 
 					stringArrayContent.add(long2); 
 				}	 
@@ -1340,6 +1400,8 @@ public class JavaModelListener implements IElementChangedListener{
 	}
 	
 	public void arrayClear(){
+		stringArrayNumber.clear();
+		stringArrayTempNumber.clear();
 		stringArray.clear();
 		stringArrayTemp.clear();
 		stringArrayContent.clear();
