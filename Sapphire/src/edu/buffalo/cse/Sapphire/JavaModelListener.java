@@ -103,6 +103,7 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	public JavaModelListener(){
 
+		/*
 		try
 		{
 			File newFile = new File(fileNameAndLocation);	
@@ -117,6 +118,7 @@ public class JavaModelListener implements IElementChangedListener{
 		{
 			ex.printStackTrace();
 		}	
+		*/
 		
 		astRootTemp = null;
         mapValue = new HashMap<Integer , String>();
