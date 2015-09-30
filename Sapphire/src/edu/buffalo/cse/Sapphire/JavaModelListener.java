@@ -473,7 +473,7 @@ public class JavaModelListener implements IElementChangedListener{
 			    		
 			    		String[] lines = a1.get(i).split("\r\n|\r|\n");
 						for (String line : lines) {					    
-						    fwriter.write(sdf.format(cal.getTime()) +  " [INSERT]: " + 
+						    fwriter.write(sdf.format(cal.getTime()) +  " [+] " + 
 									line + "\n");
 							fwriter.flush();   
 						}
@@ -483,7 +483,7 @@ public class JavaModelListener implements IElementChangedListener{
 			    	for(int i = 0; i < a2.size();i++){		
 			    		String[] lines = a2.get(i).split("\r\n|\r|\n");
 						for (String line : lines) {
-				    		fwriter.write(sdf.format(cal.getTime()) +  " [DELETE]: " + 
+				    		fwriter.write(sdf.format(cal.getTime()) +  " [-] " + 
 									line + "\n");
 							fwriter.flush();		
 						}    		    		
@@ -536,9 +536,9 @@ public class JavaModelListener implements IElementChangedListener{
 						else{
 							if(arr.contains(stringSub)){
 								cnt++;
-								stringArray.set(i, stringArray.get(i) + "(duplicate: " + cnt + " )");
-								stringArrayContent.set(i, stringSub.substring(2) + "(duplicate: " + cnt + " )");
-								arr.add(stringSub + "(duplicate: " + cnt + " )");
+								stringArray.set(i, stringArray.get(i) + "(dup: " + cnt + ")");
+								stringArrayContent.set(i, stringSub.substring(2) + "(dup: " + cnt + ")");
+								arr.add(stringSub + "(dup: " + cnt + ")");
 							}
 							else{
 								arr.add(stringSub);
@@ -561,9 +561,9 @@ public class JavaModelListener implements IElementChangedListener{
 						else{
 							if(arrTemp.contains(stringSub)){
 								cntTemp++;
-								stringArrayTemp.set(i, stringArrayTemp.get(i) + "(duplicate: " + cntTemp + " )");
-								stringArrayTempContent.set(i, stringSub.substring(2) + "(duplicate: " + cntTemp + " )");
-								arrTemp.add(stringSub + "(duplicate: " + cntTemp + " )");
+								stringArrayTemp.set(i, stringArrayTemp.get(i) + "(dup: " + cntTemp + ")");
+								stringArrayTempContent.set(i, stringSub.substring(2) + "(dup: " + cntTemp + ")");
+								arrTemp.add(stringSub + "(dup: " + cntTemp + ")");
 							}
 							else{
 								arrTemp.add(stringSub);
@@ -640,16 +640,44 @@ public class JavaModelListener implements IElementChangedListener{
 			        
 			        // display what new element is added 
 		        	for(int i = 0 ; i < afterModificationAdded.size(); i++){
-						fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-								afterModificationAdded.get(i) + "\n");
-						fwriter.flush();
+
+		        		if(afterModificationAdded.get(i).contains("dup")){
+		        			// remove dup words 
+		        			int index_of = afterModificationAdded.get(i).indexOf("dup:");
+		        			
+		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
+							afterModificationAdded.get(i).substring(0, index_of - 1) + "\n");
+							fwriter.flush();	
+		        		}
+		        		else{
+
+		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
+							afterModificationAdded.get(i) + "\n");
+							fwriter.flush();
+		        			
+		        		}
+						
 					}	
 		        	
 		        	// display what old element is removed
 					for(int i = 0 ; i < afterModificationRemoved.size(); i++){
-						fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-								afterModificationRemoved.get(i) + "\n");
-						fwriter.flush();
+						
+						// remove dup words
+						if(afterModificationRemoved.get(i).contains("dup:")){
+							int index_of = afterModificationRemoved.get(i).indexOf("dup:");
+							
+							fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
+									afterModificationRemoved.get(i).substring(0, index_of - 1) + "\n");
+							fwriter.flush();
+		        		}
+		        		
+		        		else{
+		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
+									afterModificationRemoved.get(i) + "\n");
+							fwriter.flush();	
+		        			
+		        		}
+						
 					}
 
 		
@@ -1365,12 +1393,14 @@ public class JavaModelListener implements IElementChangedListener{
 		strSimple = simple.getId();
 			
 		// remove the element name that is pretty much useless 
-		if(strSimple.equals("primitiveTypeCode") || strSimple.equals("identifier")){
+		if(strSimple.equals("primitiveTypeCode") || strSimple.equals("identifier") || strSimple.equals("escapedValue") ||
+				strSimple.equals("operator") || strSimple.equals("token")){
 			strSimple = "";
 		}
 		else{
 			strSimple = strSimple + " ";
 		}
+		
 
 		
 		
