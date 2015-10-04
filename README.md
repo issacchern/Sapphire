@@ -1,8 +1,8 @@
 # Project Sapphire
 
-![alt tag] (https://github.com/issacchern/Sapphire/blob/master/logo.jpg)
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/logo.jpg)
 
-Sapphire is a free eclipse plugin software that records the changes under JavaModel in eclipse and exports the recorded data to files. This plugin is intended for educational and teaching purposes.  
+Sapphire is a free eclipse plugin software that records the changes under JavaModel in eclipse and exports the recorded data to text files and SQLite database. This plugin is intended for educational and teaching purposes.  
 
 # Installation
 
@@ -20,7 +20,7 @@ You could also use the pre-built jar file from the downloaded zip folder and put
 
 In order to use the plugin, you will need to copy the .sapphire file from the downloaded folder (or create one .sapphire file if you like) to the .settings folder of your project. The .sapphire file is used as to enable toggle preventing every project being recorded unintendedly. 
 
-NOTE: This plugin will run automatically once installed.
+NOTE: This plugin will not run as expected if you drop the .sapphire file while using eclipse. You have to restart eclipse to take effect. 
 
 # Description
 
@@ -30,6 +30,27 @@ The objective of creating this plugin is to study the process of how beginner st
 # Sample Output
 
 This plugin will create two recorded files in the same project folder, .PROJECT_NAME.RECORDING and .PROJECT_NAME_source.RECORDING file. The first one will be recording all the changed events while the second one will be printing the initial code in the Java editor once the plugin starts. 
+
+Sample SQLite database:
+
+
+Main Event Table:
+
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite3.JPG)
+
+CompilationUnit Table:
+
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite1.JPG)
+
+Error Table: 
+
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite2.JPG)
+
+Source File Table:
+
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite4.JPG)
+
+
 
 Sample .PublicTest.RECORDING file:
 
@@ -109,6 +130,9 @@ public class Class1 {
 
 ```
 
+# Issues with Installation
+
+If for some reasons the plugin is not installed properly, please check the log file in the ../yourworkspace/.metadata/.log . If the issue is somewhat solvable, such as requiring other software installation, then please do what is necessary. If the problem still exists, please send me an email to issac.chua12@gmail.com. Thank you!
 
 
 
