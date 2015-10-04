@@ -786,6 +786,18 @@ public class JavaModelListener implements IElementChangedListener{
 						concatComment = concatComment.substring(0, concatComment.length() - 1);
 						sqlh.sqlEdit(fileNameAndLocation, className, "(not applicable)", concatComment);
 						sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);
+						
+						// write to another recorded file specifically for the source file only
+						File newFileInitial = new File(fileNameAndLocation + "/." 
+								+ previousJavaProjectName + "_source" +".RECORDING");
+						FileWriter fwriterInitial = new FileWriter(newFileInitial, true);
+						fwriterInitial.write(sdf.format(cal.getTime()) 
+								+ " [" + className + "] \n--------------------"
+								+ "-------------------------------\n" 
+								+ astRootTemp.toString() + "\n"); 
+						fwriterInitial.flush();
+						fwriterInitial.close();
+						
 					}
 
 					

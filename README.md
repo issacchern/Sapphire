@@ -29,69 +29,110 @@ The objective of creating this plugin is to study the process of how beginner st
 
 # Sample Output
 
-This plugin will create two recorded files in the same project folder, .PROJECT_NAME.RECORDING and .PROJECT_NAME_source.RECORDING file. The first one will be recording all the changed events while the second one will be printing the initial code in the Java editor once the plugin starts. 
+This plugin will create .db file for SQLite database in the project folder. I use SQLiteBrowser for viewing the data. Snapshots below (captured in SQLiteBrowser) are the main four tables of the database.
 
-Sample SQLite database:
-
-
-Main Event Table:
+- Main Event Table:
 
 ![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite3.JPG)
 
-CompilationUnit Table:
+- CompilationUnit Table:
 
 ![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite1.JPG)
 
-Error Table: 
+- Error Table: 
 
 ![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite2.JPG)
 
-Source File Table:
+- Source File Table:
 
 ![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite4.JPG)
 
 
 
+This plugin will also create two text files in the same project folder, .PROJECT_NAME.RECORDING and .PROJECT_NAME_source.RECORDING file. These two files are identical to the data in database.
+
 Sample .PublicTest.RECORDING file:
 
 ```
-2015.10.01 at 10:03:46 EDT [PLUGIN INITIALIZED]
-2015.10.01 at 10:03:46 EDT [JAVA_PROJECT ADDED]: PublicTest (not open)
-2015.10.01 at 10:03:47 EDT [PACKAGE_FRAGMENT_ROOT ADDED]: src (not open) [in PublicTest]
-2015.10.01 at 10:04:53 EDT [COMPILATION_UNIT ADDED]: Class1.java (not open) [in publicpackage [in src [in PublicTest]]]
-2015.10.01 at 10:04:55 EDT [COMPILATION_UNIT CHANGED TO publicpackage.Class1]
-2015.10.01 at 10:04:55 EDT [SOURCE FILE INITIALIZED] 
-2015.10.01 at 10:05:27 EDT [+] int x;
-2015.10.01 at 10:05:27 EDT [+] int y;
-2015.10.01 at 10:05:27 EDT [+] int z;
-2015.10.01 at 10:05:27 EDT [LINE ADDED (publicpackage.Class1)]: 5 $ [FIELD_DECLARATION] (int) | (x) | 
-2015.10.01 at 10:05:27 EDT [LINE ADDED (publicpackage.Class1)]: 6 $ [FIELD_DECLARATION] (int) | (y) | 
-2015.10.01 at 10:05:27 EDT [LINE ADDED (publicpackage.Class1)]: 7 $ [FIELD_DECLARATION] (int) | (z) | 
-2015.10.01 at 10:05:34 EDT [+] public Class1(){
-2015.10.01 at 10:05:34 EDT [+] }
-2015.10.01 at 10:05:34 EDT [LINE ADDED (publicpackage.Class1)]: 9 $ [METHOD_DECLARATION] keyword (public) | constructor (true) | (Class1) | 
-2015.10.01 at 10:05:34 EDT [LINE ADDED (publicpackage.Class1)]: 9 $ OPEN [METHOD_DECLARATION]
-2015.10.01 at 10:05:39 EDT [+] public void method(){
-2015.10.01 at 10:05:39 EDT [+] }
-2015.10.01 at 10:05:39 EDT [LINE ADDED (publicpackage.Class1)]: 13 $ [METHOD_DECLARATION] keyword (public) | constructor (false) | (void) | (method) | 
-2015.10.01 at 10:05:54 EDT [+] public Class1(int x1,int x2){
-2015.10.01 at 10:05:54 EDT [-] public Class1(){
-2015.10.01 at 10:05:54 EDT [LINE ADDED (publicpackage.Class1)]: 9 $ [METHOD_DECLARATION] keyword (public) | constructor (true) | (Class1) | (int) | varargs (false) | (x1) | (int) | varargs (false) | (x2) | 
-2015.10.01 at 10:05:54 EDT [LINE REMOVED (publicpackage.Class1)]: 9 $ [METHOD_DECLARATION] keyword (public) | constructor (true) | (Class1) | 
-2015.10.01 at 10:06:02 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert "AssignmentOperator Expression" to complete Assignment
-2015.10.01 at 10:06:02 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert ";" to complete Statement
-2015.10.01 at 10:06:02 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * The left-hand side of an assignment must be a variable
-2015.10.01 at 10:06:06 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert "AssignmentOperator Expression" to complete Assignment
-2015.10.01 at 10:06:06 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert ";" to complete Statement
-2015.10.01 at 10:06:08 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert "AssignmentOperator Expression" to complete Assignment
-2015.10.01 at 10:06:08 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * Syntax error, insert ";" to complete Statement
-2015.10.01 at 10:06:10 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * y1 cannot be resolved to a variable
-2015.10.01 at 10:06:14 EDT [ERROR DETECTED(publicpackage.Class1)]: 11 * y1 cannot be resolved to a variable
-2015.10.01 at 10:06:18 EDT [+] public Class1(int x1,int y1){
-2015.10.01 at 10:06:18 EDT [+] this.x=x1;
-2015.10.01 at 10:06:18 EDT [+] this.y=y1;
-2015.10.01 at 10:06:18 EDT [-] public Class1(int x1,int x2){
-2015.10.01 at 10:06:18 EDT [LINE ADDED (publicpackage.Class1)]: 9 $ [METHOD_DECLARATION] keyword (public) | constructor (true) | (Class1) | (int) | varargs (false) | (x1) | (int) | varargs (false) | (y1) | 
+2015.10.04 at 14:12:48 EDT [PLUGIN INITIALIZED]
+2015.10.04 at 14:12:48 EDT [PACKAGE_FRAGMENT ADDED]: samplepackage
+2015.10.04 at 14:12:58 EDT [COMPILATION_UNIT ADDED]: SampleClass1.java
+2015.10.04 at 14:12:59 EDT [COMPILATION_UNIT CHANGED TO samplepackage.SampleClass1]
+2015.10.04 at 14:12:59 EDT [SOURCE FILE INITIALIZED] 
+2015.10.04 at 14:13:04 EDT [+] int a;
+2015.10.04 at 14:13:04 EDT [LINE ADDED (samplepackage.SampleClass1)]: 5 $ [FIELD_DECLARATION] (int) | (a) | 
+2015.10.04 at 14:13:07 EDT [+] int b;
+2015.10.04 at 14:13:07 EDT [LINE ADDED (samplepackage.SampleClass1)]: 6 $ [FIELD_DECLARATION] (int) | (b) | 
+2015.10.04 at 14:13:12 EDT [+] public void method(){
+2015.10.04 at 14:13:12 EDT [+] }
+2015.10.04 at 14:13:12 EDT [LINE ADDED (samplepackage.SampleClass1)]: 8 $ [METHOD_DECLARATION] keyword (public) | constructor (false) | (void) | (method) | 
+2015.10.04 at 14:13:12 EDT [LINE ADDED (samplepackage.SampleClass1)]: 8 $ OPEN [METHOD_DECLARATION]
+2015.10.04 at 14:13:15 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 9 * Syntax error, insert "VariableDeclarators" to complete LocalVariableDeclaration
+2015.10.04 at 14:13:15 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 9 * Syntax error, insert ";" to complete BlockStatements
+2015.10.04 at 14:13:15 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 9 * x cannot be resolved to a type
+2015.10.04 at 14:13:19 EDT [+] int a=0;
+2015.10.04 at 14:13:19 EDT [LINE ADDED (samplepackage.SampleClass1)]: 9 $ [VARIABLE_DECLARATION_STATEMENT] (int) | (a) | (0) | 
+2015.10.04 at 14:13:19 EDT [LINE ADDED (samplepackage.SampleClass1)]: 9 $ CLOSE [METHOD_DECLARATION]
+2015.10.04 at 14:13:21 EDT [-] int b;
+2015.10.04 at 14:13:21 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 6 $ [FIELD_DECLARATION] (int) | (b) | 
+2015.10.04 at 14:13:30 EDT [+] public SampleClass1(){
+2015.10.04 at 14:13:30 EDT [+] }
+2015.10.04 at 14:13:30 EDT [LINE ADDED (samplepackage.SampleClass1)]: 11 $ [METHOD_DECLARATION] keyword (public) | constructor (true) | (SampleClass1) | 
+2015.10.04 at 14:13:32 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 12 * Syntax error, insert "new ClassType ( )" to complete Expression
+2015.10.04 at 14:13:32 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 12 * Syntax error, insert ";" to complete BlockStatements
+2015.10.04 at 14:13:37 EDT [+] System.out.println();
+2015.10.04 at 14:13:37 EDT [LINE ADDED (samplepackage.SampleClass1)]: 12 $ [QUALIFIED_NAME] (System) | (out) | (println) | 
+2015.10.04 at 14:13:42 EDT [+] System.out.println("Hello World");
+2015.10.04 at 14:13:42 EDT [-] System.out.println();
+2015.10.04 at 14:13:42 EDT [LINE ADDED (samplepackage.SampleClass1)]: 12 $ [QUALIFIED_NAME] (System) | (out) | (println) | ("Hello World") | 
+2015.10.04 at 14:13:42 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 12 $ [QUALIFIED_NAME] (System) | (out) | (println) | 
+2015.10.04 at 14:13:50 EDT [+] method();
+2015.10.04 at 14:13:50 EDT [LINE ADDED (samplepackage.SampleClass1)]: 12 $ [METHOD_INVOCATION] (method) | 
+2015.10.04 at 14:14:03 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 12 * Type mismatch: cannot convert from void to boolean
+2015.10.04 at 14:14:08 EDT [ERROR DETECTED(samplepackage.SampleClass1)]: 7 * This method must return a result of type boolean
+2015.10.04 at 14:14:12 EDT [+] public boolean method(){
+2015.10.04 at 14:14:12 EDT [+] return true;
+2015.10.04 at 14:14:12 EDT [+] boolean x=method();
+2015.10.04 at 14:14:12 EDT [-] public void method(){
+2015.10.04 at 14:14:12 EDT [-] method();
+2015.10.04 at 14:14:12 EDT [LINE ADDED (samplepackage.SampleClass1)]: 7 $ [METHOD_DECLARATION] keyword (public) | constructor (false) | (boolean) | (method) | 
+2015.10.04 at 14:14:12 EDT [LINE ADDED (samplepackage.SampleClass1)]: 10 $ [RETURN_STATEMENT] booleanValue (true) | 
+2015.10.04 at 14:14:12 EDT [LINE ADDED (samplepackage.SampleClass1)]: 14 $ [VARIABLE_DECLARATION_STATEMENT] (boolean) | (x) | (method) | 
+2015.10.04 at 14:14:12 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 7 $ [METHOD_DECLARATION] keyword (public) | constructor (false) | (void) | (method) | 
+2015.10.04 at 14:14:12 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 12 $ [METHOD_INVOCATION] (method) | 
+2015.10.04 at 14:14:17 EDT [+] boolean enabled=method();
+2015.10.04 at 14:14:17 EDT [-] boolean x=method();
+2015.10.04 at 14:14:17 EDT [LINE ADDED (samplepackage.SampleClass1)]: 14 $ [VARIABLE_DECLARATION_STATEMENT] (boolean) | (enabled) | (method) | 
+2015.10.04 at 14:14:17 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 14 $ [VARIABLE_DECLARATION_STATEMENT] (boolean) | (x) | (method) | 
+2015.10.04 at 14:14:30 EDT [COMPILATION_UNIT ADDED]: SampleClass2.java
+2015.10.04 at 14:14:30 EDT [COMPILATION_UNIT CHANGED TO samplepackage.SampleClass2]
+2015.10.04 at 14:14:30 EDT [SOURCE FILE INITIALIZED] 
+2015.10.04 at 14:14:40 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * Syntax error, insert "Identifier (" to complete MethodHeaderName
+2015.10.04 at 14:14:40 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * Syntax error, insert ")" to complete MethodDeclaration
+2015.10.04 at 14:14:40 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * Syntax error, insert ";" to complete ClassBodyDeclarations
+2015.10.04 at 14:14:47 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * ArrayList cannot be resolved to a type
+2015.10.04 at 14:14:47 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * Syntax error, insert "( )" to complete Expression
+2015.10.04 at 14:14:47 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * Syntax error, insert ";" to complete ClassBodyDeclarations
+2015.10.04 at 14:14:49 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * ArrayList cannot be resolved to a type
+2015.10.04 at 14:14:49 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * ArrayList cannot be resolved to a type
+2015.10.04 at 14:14:50 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * ArrayList cannot be resolved to a type
+2015.10.04 at 14:14:50 EDT [ERROR DETECTED(samplepackage.SampleClass2)]: 5 * ArrayList cannot be resolved to a type
+2015.10.04 at 14:14:54 EDT [+] import java.util.ArrayList;
+2015.10.04 at 14:14:54 EDT [+] ArrayList<String> array=new ArrayList<String>();
+2015.10.04 at 14:14:54 EDT [LINE ADDED (samplepackage.SampleClass2)]: 3 $ [IMPORT_DECLARATION] static (false) | (java) | (util) | (ArrayList) | onDemand (false) | 
+2015.10.04 at 14:14:54 EDT [LINE ADDED (samplepackage.SampleClass2)]: 7 $ [SIMPLE_TYPE] (ArrayList) | (String) | (array) | (ArrayList) | (String) | 
+2015.10.04 at 14:14:59 EDT [LINE ADDED (samplepackage.SampleClass2)]: 9 # [LINE_COMMENT] // this class is 
+2015.10.04 at 14:15:01 EDT [LINE ADDED (samplepackage.SampleClass2)]: 9 # [LINE_COMMENT] // this class is going to be 
+2015.10.04 at 14:15:01 EDT [LINE REMOVED (samplepackage.SampleClass2)]: 9 # [LINE_COMMENT] // this class is 
+2015.10.04 at 14:15:03 EDT [LINE ADDED (samplepackage.SampleClass2)]: 9 # [LINE_COMMENT] // this class is going to be awesome
+2015.10.04 at 14:15:03 EDT [LINE REMOVED (samplepackage.SampleClass2)]: 9 # [LINE_COMMENT] // this class is going to be 
+2015.10.04 at 14:15:08 EDT [COMPILATION_UNIT CHANGED TO samplepackage.SampleClass1]
+2015.10.04 at 14:15:20 EDT [COMPILATION_UNIT REMOVED]: SampleClass2.java
+2015.10.04 at 14:15:31 EDT [+] System.out.println("Class is removed! ");
+2015.10.04 at 14:15:31 EDT [-] System.out.println("Hello World");
+2015.10.04 at 14:15:31 EDT [LINE ADDED (samplepackage.SampleClass1)]: 15 $ [QUALIFIED_NAME] (System) | (out) | (println) | ("Class is removed! ") | 
+2015.10.04 at 14:15:31 EDT [LINE REMOVED (samplepackage.SampleClass1)]: 15 $ [QUALIFIED_NAME] (System) | (out) | (println) | ("Hello World") | 
+2015.10.04 at 14:15:41 EDT [PLUGIN CLOSED]
 
 ```
 
@@ -99,34 +140,34 @@ Sample .PublicTest_source.RECORDING file:
 
 ```
 
-2015.10.01 at 10:04:55 EDT [publicpackage.Class1] 
+2015.10.04 at 14:12:59 EDT [samplepackage.SampleClass1] 
 ---------------------------------------------------
-package publicpackage;
-public class Class1 {
+package samplepackage;
+public class SampleClass1 {
 }
 
-2015.10.01 at 10:11:16 EDT [publicpackage.Class1] 
+2015.10.04 at 14:14:30 EDT [samplepackage.SampleClass2] 
 ---------------------------------------------------
-package publicpackage;
-public class Class1 {
-  int x;
-  int y;
-  int z;
-  public Class1(  int x1,  int y1){
-    this.x=x1;
-    this.y=y1;
+package samplepackage;
+public class SampleClass2 {
+}
+
+2015.10.04 at 14:21:17 EDT [samplepackage.SampleClass1] 
+---------------------------------------------------
+
+package samplepackage;
+public class SampleClass1 {
+  int a;
+  public boolean method(){
+    int a=0;
+    return true;
   }
-  public String method(  int a){
-    String s;
-    if (a > 5) {
-      s="hello_world!";
-    }
- else {
-      s="hello_universe!";
-    }
-    return s;
+  public SampleClass1(){
+    boolean enabled=method();
+    System.out.println("Class is removed! ");
   }
 }
+
 
 ```
 
