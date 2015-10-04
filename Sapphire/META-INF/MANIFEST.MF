@@ -1,8 +1,8 @@
 Manifest-Version: 1.0
 Bundle-ManifestVersion: 2
 Bundle-Name: Sapphire
-Bundle-SymbolicName: sapphire;singleton:=true
-Bundle-Version: 1.0.8.2
+Bundle-SymbolicName: edu.buffalo.cse.sapphire;singleton:=true
+Bundle-Version: 1.1.0
 Bundle-Activator: edu.buffalo.cse.Sapphire.Activator
 Require-Bundle: org.eclipse.ui,
  org.eclipse.core.runtime
@@ -11,6 +11,29 @@ Bundle-ActivationPolicy: lazy
 Import-Package: org.eclipse.core.resources,
  org.eclipse.jdt.core,
  org.eclipse.jdt.core.compiler,
- org.eclipse.jdt.core.compiler.batch,
- org.eclipse.jdt.core.dom,
- org.eclipse.jdt.internal.core
+ org.eclipse.jdt.core.dom
+Bundle-ClassPath: .,
+ lib/sqlite-jdbc-3.8.11.1.jar
+Export-Package: edu.buffalo.cse.Sapphire;
+  uses:="org.osgi.framework,
+   org.eclipse.ui,
+   org.eclipse.jdt.core,
+   org.eclipse.jdt.core.dom,
+   org.eclipse.jface.resource,
+   org.eclipse.ui.plugin",
+ org.sqlite;
+  uses:="org.ibex.nestedvm,
+   org.sqlite.core,
+   javax.sql,
+   org.sqlite.jdbc4",
+ org.sqlite.core;uses:="org.sqlite,org.sqlite.date,org.sqlite.jdbc4",
+ org.sqlite.date,
+ org.sqlite.javax;uses:="org.sqlite,javax.sql,org.sqlite.jdbc4",
+ org.sqlite.jdbc3;uses:="org.sqlite,org.sqlite.core",
+ org.sqlite.jdbc4;
+  uses:="org.sqlite,
+   javax.sql,
+   org.sqlite.core,
+   org.sqlite.jdbc3",
+ org.sqlite.util
+Bundle-Vendor: University at Buffalo
