@@ -49,6 +49,7 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
+import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 
@@ -67,7 +68,7 @@ import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
  */
 public class JavaModelListener implements IElementChangedListener{
 	
-	private SQLiteHelper sqlh;
+	private static SQLiteHelper sqlh;
 	private static String fileNameAndLocation =  "main_recorder";
 	private static String className = "";
 	private static String long2 = "";
@@ -81,7 +82,7 @@ public class JavaModelListener implements IElementChangedListener{
 	private static HashMap<String, String> mapComment = new HashMap<String, String>(); // for comment blocks
 	private static HashMap<String, ASTNode> mapAST = new HashMap<String, ASTNode>(); // for ASTNode
 	private static HashMap<Integer, String> mapValue; // for node type
-	private FileWriter fwriter;
+	private static FileWriter fwriter;
 	private static IElementChangedListener _listener = new JavaModelListener();
 	private ICompilationUnit cuTemp;	
 	private static String sourceTemp;
@@ -1504,6 +1505,25 @@ public class JavaModelListener implements IElementChangedListener{
 		commentListTemp.clear();
 		commentListContent.clear();
 		commentListTempContent.clear();	
+	}
+
+
+	public static void endPlugin() {
+		if(enableRecording){
+			Calendar cal = Calendar.getInstance();
+	        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
+        	try {
+				fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
+				fwriter.flush();
+				fwriter.close();
+				sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", previousJavaProjectName);
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				e.printStackTrace();
+			}
+        }
+		
 	}
 
 }
