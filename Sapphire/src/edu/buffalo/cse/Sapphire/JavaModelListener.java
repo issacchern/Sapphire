@@ -12,8 +12,6 @@
 package edu.buffalo.cse.Sapphire;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -49,7 +47,6 @@ import org.eclipse.jdt.core.dom.CompilationUnit;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
-import org.eclipse.ui.plugin.AbstractUIPlugin;
 
 import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 
@@ -57,8 +54,6 @@ import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 /**
  * This class handles all the changes to the JavaModel, recording all of
  * the changes that the user has made into a text file. 
- * 
- * There will be two types of recording: file-based and database (Sqlite).
  * 
  * NOTE: If you add the .sapphire file while using eclipse, chances 
  * are the plugin will not be installed. You will have to restart 
@@ -69,7 +64,7 @@ import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 public class JavaModelListener implements IElementChangedListener{
 	
 	private static SQLiteHelper sqlh;
-	private static String fileNameAndLocation =  "main_recorder";
+	private static String fileNameAndLocation = "";
 	private static String className = "";
 	private static String long2 = "";
 	private static String previousJavaProjectName = "";
@@ -82,7 +77,6 @@ public class JavaModelListener implements IElementChangedListener{
 	private static HashMap<String, String> mapComment = new HashMap<String, String>(); // for comment blocks
 	private static HashMap<String, ASTNode> mapAST = new HashMap<String, ASTNode>(); // for ASTNode
 	private static HashMap<Integer, String> mapValue; // for node type
-	private static FileWriter fwriter;
 	private static IElementChangedListener _listener = new JavaModelListener();
 	private ICompilationUnit cuTemp;	
 	private static String sourceTemp;
@@ -101,6 +95,8 @@ public class JavaModelListener implements IElementChangedListener{
 	private static List<String> commentListTemp = new ArrayList<String>();
 	private static List<String> commentListTempContent = new ArrayList<String>();
 	
+	private static String command = "";
+	private static String commandTemp = "";
 	private static final int DURATION = 300000; // refresh rate at 5 mins
 	private String current_time= "";
 	private String past_time = "" ;
@@ -247,17 +243,7 @@ public class JavaModelListener implements IElementChangedListener{
 					true_or_false = false;
 					if(enableRecording){
 						String str = problem.getSourceLineNumber() + " * " + problem.getMessage();
-						try {
-							Calendar cal = Calendar.getInstance();
-					        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-				        	fwriter.write(sdf.format(cal.getTime()) + " [ERROR DETECTED(" + className + ")]: " +
-				        			str + "\n");
-							fwriter.flush();		
-							concatError = concatError + str + "\n";
-
-						} catch (IOException e) {
-							e.printStackTrace();
-						}	
+						concatError = concatError + str + "\n";	
 					}
 				}
 			}
@@ -266,8 +252,15 @@ public class JavaModelListener implements IElementChangedListener{
 				try {
 					if(concatError.length() > 2){		
 						concatError = concatError.substring(0, concatError.length() - 1);
+						command = "CompilationUnit Error";
 						sqlh.sqlError(fileNameAndLocation, className, concatError);
-						sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", className);
+						if(!command.equals(commandTemp)){
+							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", className);
+						}
+						
+						commandTemp = command;
+
+						
 					}
 					
 				} catch (ClassNotFoundException e) {
@@ -410,8 +403,6 @@ public class JavaModelListener implements IElementChangedListener{
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
 				parserTemp.setResolveBindings(true);
 				astRootTemp = (CompilationUnit) parserTemp.createAST(null);
-				Calendar cal = Calendar.getInstance();
-		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 		        
 		        // parse the astRootTemp
 		        isTempLarger = true;
@@ -425,32 +416,15 @@ public class JavaModelListener implements IElementChangedListener{
 					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
 				}
 
-				fwriter.write(sdf.format(cal.getTime()) + " [SOURCE FILE INITIALIZED] \n");
-				fwriter.flush();
-
 				//SQLite initialization
 				sqlh.sqlMain(fileNameAndLocation, "Source File Initialized", className);
 				sqlh.sqlSource(fileNameAndLocation, className, astRootTemp.toString());
-
-				// write to another recorded file specifically for the source file only
-				File newFileInitial = new File(fileNameAndLocation + "/." 
-						+ previousJavaProjectName + "_source" +".RECORDING");
-				FileWriter fwriterInitial = new FileWriter(newFileInitial, true);
-				fwriterInitial.write(sdf.format(cal.getTime()) 
-						+ " [" + className + "] \n--------------------"
-						+ "-------------------------------\n" 
-						+ astRootTemp.toString() + "\n"); 
-				fwriterInitial.flush();
-				fwriterInitial.close();
-				
+						
 				// handle comments and docs
 				parse(mapComment.get(projectAndClassName));	
 				
 				String concatComment = "";
 				for(int i = 0; i < commentListTemp.size(); i++){
-					fwriter.write(sdf.format(cal.getTime()) +  " [LINE INITIALIZED (" + className + ")]: " + 
-							commentListTemp.get(i) + "\n");
-					fwriter.flush();
 					concatComment = concatComment + commentListTemp.get(i) + "\n";
 				}
 					
@@ -500,9 +474,6 @@ public class JavaModelListener implements IElementChangedListener{
 			    	for(int i = 0; i < a1.size();i++){	
 			    		String[] lines = a1.get(i).split("\r\n|\r|\n");
 						for (String line : lines) {					    
-						    fwriter.write(sdf.format(cal.getTime()) +  " [+] " + 
-									line + "\n");
-							fwriter.flush();
 							concatInsertDelete = concatInsertDelete + "[+] " + line + "\n";
 						}
 			    			
@@ -510,11 +481,8 @@ public class JavaModelListener implements IElementChangedListener{
 			    		    			    	
 			    	for(int i = 0; i < a2.size();i++){		
 			    		String[] lines = a2.get(i).split("\r\n|\r|\n");
-						for (String line : lines) {
-				    		fwriter.write(sdf.format(cal.getTime()) +  " [-] " + 
-									line + "\n");
-							fwriter.flush();		
-							concatInsertDelete = concatInsertDelete + "[+] " + line + "\n";
+						for (String line : lines) {	
+							concatInsertDelete = concatInsertDelete + "[-] " + line + "\n";
 						}    		    		
 			    	}
 			    	
@@ -677,16 +645,10 @@ public class JavaModelListener implements IElementChangedListener{
 		        			concatAddedRemoved = concatAddedRemoved + "[ADDED] " + 
 		        					afterModificationAdded.get(i).substring(0, index_of - 1) + "\n";
 		        			
-		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-							afterModificationAdded.get(i).substring(0, index_of - 1) + "\n");
-							fwriter.flush();	
 		        		}
 		        		else{
 
 		        			concatAddedRemoved = concatAddedRemoved + "[ADDED] " + afterModificationAdded.get(i) + "\n";
-		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-							afterModificationAdded.get(i) + "\n");
-							fwriter.flush();
 		        			
 		        		}
 						
@@ -701,19 +663,11 @@ public class JavaModelListener implements IElementChangedListener{
 							int index_of = afterModificationRemoved.get(i).indexOf("dup:");
 							
 							concatAddedRemoved = concatAddedRemoved + "[REMOVED] " + 
-									afterModificationRemoved.get(i).substring(0, index_of - 1) + "\n";
-							
-							
-							fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-									afterModificationRemoved.get(i).substring(0, index_of - 1) + "\n");
-							fwriter.flush();
+									afterModificationRemoved.get(i).substring(0, index_of - 1) + "\n";			
 		        		}
 		        		
 		        		else{
 		        			concatAddedRemoved = concatAddedRemoved + "[REMOVED] " + afterModificationRemoved.get(i) + "\n";
-		        			fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-									afterModificationRemoved.get(i) + "\n");
-							fwriter.flush();	
 		        			
 		        		}		
 					}
@@ -723,7 +677,13 @@ public class JavaModelListener implements IElementChangedListener{
 						concatInsertDelete = concatInsertDelete.substring(0, concatInsertDelete.length() - 1);
 						concatAddedRemoved = concatAddedRemoved.substring(0, concatAddedRemoved.length() - 1);	
 						sqlh.sqlEdit(fileNameAndLocation, className, concatInsertDelete, concatAddedRemoved);
-						sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);
+						command = "CompilationUnit Edited";
+						if(!command.equals(commandTemp)){
+							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);
+						}
+						
+						commandTemp = command;
+						
 					}
 
 		
@@ -738,6 +698,13 @@ public class JavaModelListener implements IElementChangedListener{
 					afterCommentAdded.addAll(commentList);
 					ArrayList<String> afterCommentRemoved = new ArrayList<String>();
 					afterCommentRemoved.addAll(commentListTemp);
+					
+					String sourceComment = "";
+					for(int i =0; i < afterCommentAdded.size(); i++){
+						sourceComment = sourceComment + afterCommentAdded.get(i).replace("# [LINE_COMMENT]","|")
+								.replace("# [BLOCK_COMMENT]","|").replace("# [JAVADOC]","|")
+								+ "\n";
+					}
 					
 					// get the ArrayList with only the new elements added 
 					for(int i = 0 ; i < commentList.size(); i++){
@@ -766,39 +733,37 @@ public class JavaModelListener implements IElementChangedListener{
 					}
 
 					String concatComment = "";
+					String diffComment = "";
 					// display what new comment is added
 					for(int i = 0 ; i < afterCommentAdded.size(); i++){
 						concatComment = concatComment + "[ADDED] " + afterCommentAdded.get(i) + "\n";
-						fwriter.write(sdf.format(cal.getTime()) +  " [LINE ADDED (" + className + ")]: " + 
-								afterCommentAdded.get(i) + "\n");
-						fwriter.flush();
+						diffComment = diffComment + "[+] " + afterCommentAdded.get(i)
+								.substring(afterCommentAdded.get(i).indexOf('/')-1, afterCommentAdded.get(i).length()) + "\n";
 					}
 					
 					// display what old comment is removed
 					for(int i = 0 ; i < afterCommentRemoved.size(); i++){
 						concatComment = concatComment + "[REMOVED] " + afterCommentRemoved.get(i) + "\n";
-						fwriter.write(sdf.format(cal.getTime()) +  " [LINE REMOVED (" + className + ")]: " + 
-								afterCommentRemoved.get(i) + "\n");   
-						fwriter.flush();
+						diffComment = diffComment + "[-] " + afterCommentRemoved.get(i)
+								.substring(afterCommentRemoved.get(i).indexOf('/')-1, afterCommentRemoved.get(i).length()) + "\n";
+						
 					}
+					
+					
 					
 					// Important part
 					if(concatComment.length() > 2){
 						concatComment = concatComment.substring(0, concatComment.length() - 1);
-						sqlh.sqlEdit(fileNameAndLocation, className, "(not applicable)", concatComment);
-						sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);
 						
-						// write to another recorded file specifically for the source file only
-						File newFileInitial = new File(fileNameAndLocation + "/." 
-								+ previousJavaProjectName + "_source" +".RECORDING");
-						FileWriter fwriterInitial = new FileWriter(newFileInitial, true);
-						fwriterInitial.write(sdf.format(cal.getTime()) 
-								+ " [" + className + "] \n--------------------"
-								+ "-------------------------------\n" 
-								+ astRootTemp.toString() + "\n"); 
-						fwriterInitial.flush();
-						fwriterInitial.close();
+						sqlh.sqlEdit(fileNameAndLocation, className, diffComment, concatComment);
 						
+						command = "CompilationUnit Edited";
+						if(!command.equals(commandTemp)){
+							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);
+						}
+					
+						commandTemp = command;
+
 					}
 
 					
@@ -809,7 +774,7 @@ public class JavaModelListener implements IElementChangedListener{
 					Date date2 = sdf.parse(past_time);
 					if( date1.getTime() - date2.getTime() > DURATION){
 						past_time = current_time;
-						sqlh.sqlSource(fileNameAndLocation, className, astRoot.toString());					
+						sqlh.sqlSource(fileNameAndLocation, className, astRoot.toString() + "\n" + sourceComment);					
 					}
 					
 					// remove all elements in those lists 
@@ -832,25 +797,7 @@ public class JavaModelListener implements IElementChangedListener{
 			e.printStackTrace();
 		}		
 	}
-	
-	/**
-	 * This function creates the recording file.
-	 * 
-	 * @author Chern Yee Chua
-	 */
-	
-	public void reinitializeFile(String previousName){
-		try
-		{
-			File newFile = new File(previousName);
-			fwriter = new FileWriter(newFile, true);
-		}
-		catch (Exception ex)
-		{
-			ex.printStackTrace();
-		}	
-	}
-	
+		
 	/**
 	 * This functions handles bunch of cases, for example, enable/disable 
 	 * recording, checking if still working on same java file/project, 
@@ -869,8 +816,6 @@ public class JavaModelListener implements IElementChangedListener{
 				
 				if(previousJavaProjectName.equals("")){
 					// get the name of project and location
-					Calendar cal = Calendar.getInstance();
-			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 					previousJavaProjectName = event.getDelta().getElement().getJavaProject().getProject().getName();
 					fileNameAndLocation = event.getDelta().getElement().getJavaProject().getProject().getLocation().toString();
 					
@@ -879,9 +824,6 @@ public class JavaModelListener implements IElementChangedListener{
 					enableRecording = checkFile.exists();
 					
 					if(enableRecording){
-						reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-						fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-						fwriter.flush();	  
 						sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
 						
 					}
@@ -969,15 +911,10 @@ public class JavaModelListener implements IElementChangedListener{
 								
 								// the user switches to another java class file
 								else{	
-									Calendar cal = Calendar.getInstance();
-							        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-							        
+						        
 							        className = event.getDelta().getCompilationUnitAST().getTypeRoot().findPrimaryType().getFullyQualifiedName();
 							        
 							        if(enableRecording){
-							        	fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT CHANGED TO " + 
-												className + "]\n");
-										fwriter.flush();	
 										sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Changed", className);
 							        }
 									
@@ -1004,9 +941,7 @@ public class JavaModelListener implements IElementChangedListener{
 							
 							// this else_statement is triggered when the COMPILATION_UNIT is either empty or 
 							// class type name is invalid 
-							else{
-								Calendar cal = Calendar.getInstance();
-						        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");			
+							else{		
 								ICompilationUnit cuCheck = (ICompilationUnit) event.getDelta().getElement();
 								ASTParser parserCheck = ASTParser.newParser(AST.JLS8);
 								parserCheck.setSource(cuCheck); 
@@ -1019,9 +954,6 @@ public class JavaModelListener implements IElementChangedListener{
 									if(astCheck.toString().length() == 0){		
 										
 										error_checking(event);
-										
-										fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
-										fwriter.flush();
 										sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", "Empty Source File");
 
 									} 				
@@ -1039,12 +971,7 @@ public class JavaModelListener implements IElementChangedListener{
 					 * Procedure is same as the previous case.
 					 */
 					else{
-						Calendar cal = Calendar.getInstance();
-				        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 				        if(enableRecording){
-				        	fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-							fwriter.flush();
-							fwriter.close();
 							sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", previousJavaProjectName);
 				        }
 
@@ -1054,10 +981,7 @@ public class JavaModelListener implements IElementChangedListener{
 						File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
 						enableRecording = checkFile.exists();
 						
-						if(enableRecording){
-							reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-							fwriter.flush();	  
+						if(enableRecording){  
 							sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
 						}
 						
@@ -1098,8 +1022,6 @@ public class JavaModelListener implements IElementChangedListener{
 								if(enableRecording){
 									
 									if(astCheck.toString().length() == 0){						
-										fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ERROR]: EMPTY SOURCE FILE DETECTED\n");
-										fwriter.flush();
 										sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", "Empty Source File");
 									} 
 									else{
@@ -1139,8 +1061,6 @@ public class JavaModelListener implements IElementChangedListener{
             			delta.getElement().getElementType() == PACKAGE_FRAGMENT_ROOT ||
             			delta.getElement().getElementType() == COMPILATION_UNIT ){
             		
-            		Calendar cal = Calendar.getInstance();
-    		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
     		        String projectName = delta.getElement().getJavaProject().getProject().getName();
     		        
     		        if(previousJavaProjectName.equals("")){
@@ -1149,10 +1069,7 @@ public class JavaModelListener implements IElementChangedListener{
     					
     					File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
     					enableRecording = checkFile.exists();
-    					if(enableRecording){
-    						reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-    						fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-    						fwriter.flush();	  
+    					if(enableRecording){	  
     						sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
     					}
     		        }
@@ -1163,30 +1080,19 @@ public class JavaModelListener implements IElementChangedListener{
     		        	}
     		        	
     		        	else{  		
-    						try {
-    							if(enableRecording){
-    								fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-        							fwriter.flush();
-        							fwriter.close();
-        							sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", previousJavaProjectName);
-    							}
-    							
-    							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
-    							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
+    						if(enableRecording){
+								sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", previousJavaProjectName);
+							}
+							
+							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
+							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
 
 
-    							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
-    							enableRecording = checkFile.exists();
-    							if(enableRecording){
-    								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-        							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-        							fwriter.flush();
-        							sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
-    							}				
-    							
-    						} catch (IOException e) {
-    							e.printStackTrace();
-    						} 
+							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+							enableRecording = checkFile.exists();
+							if(enableRecording){
+								sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
+							} 
     		        	}
     		        }
     		        
@@ -1194,28 +1100,18 @@ public class JavaModelListener implements IElementChangedListener{
     		        if(enableRecording){
     		        	switch(delta.getElement().getElementType()){
                 		case 1: 	 
-                			fwriter.write(sdf.format(cal.getTime()) + " [JAVA_MODEL ADDED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "JavaModel Added", delta.getElement().getElementName());
                 			break;       		
                 		case 2:         			
-                			fwriter.write(sdf.format(cal.getTime()) + " [JAVA_PROJECT ADDED]: " + delta.getElement().getElementName() + "\n");
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "JavaProject Added", delta.getElement().getElementName());
                 			break;       			
                 		case 3:         			
-                			fwriter.write(sdf.format(cal.getTime()) + " [PACKAGE_FRAGMENT_ROOT ADDED]: " + delta.getElement().getElementName() + "\n");
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "PackageFragmentRoot Added", delta.getElement().getElementName());
                 			break;       			
                 		case 4: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [PACKAGE_FRAGMENT ADDED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "PackageFragment Added", delta.getElement().getElementName());
                 			break;        			
                 		case 5: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT ADDED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Added", delta.getElement().getElementName());
                 			break;
                 		default: 
@@ -1236,70 +1132,46 @@ public class JavaModelListener implements IElementChangedListener{
     			delta.getElement().getElementType() == PACKAGE_FRAGMENT ||
     			delta.getElement().getElementType() == PACKAGE_FRAGMENT_ROOT ||
     			delta.getElement().getElementType() == COMPILATION_UNIT ){
-            		
-            		Calendar cal = Calendar.getInstance();
-    		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");	        
+            		     
     		        String projectName = delta.getElement().getJavaProject().getProject().getName();	    
-
     		        if(projectName.equals(previousJavaProjectName)){	
     	        		// do nothing now... 
     	        	}
     	        	
     	        	else{
-    					try {
-    						if(enableRecording){
-    							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-        						fwriter.flush();
-        						fwriter.close();
-        						sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", "previousJavaProjectName");
-    						}
-    						
-    						if(delta.getElement().getJavaProject() != null &&
-    							delta.getElement().getJavaProject().getProject() != null &&
-    							delta.getElement().getJavaProject().getProject().getLocation() != null){
-    							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
-    							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
-    							
-    							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
-    							enableRecording = checkFile.exists();
-    							if(enableRecording){
-    								reinitializeFile(fileNameAndLocation + "/." + previousJavaProjectName + ".RECORDING");
-        							fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN INITIALIZED]\n");
-        							fwriter.flush();	  
-        							sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", "previousJavaProjectName");
-    							}		
-    						}
-
-    					} catch (IOException e) {
-    						e.printStackTrace();
-    					} 
+    					if(enableRecording){
+							sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", "previousJavaProjectName");
+						}
+						
+						if(delta.getElement().getJavaProject() != null &&
+							delta.getElement().getJavaProject().getProject() != null &&
+							delta.getElement().getJavaProject().getProject().getLocation() != null){
+							previousJavaProjectName = delta.getElement().getJavaProject().getProject().getName();
+							fileNameAndLocation = delta.getElement().getJavaProject().getProject().getLocation().toString();
+							
+							File checkFile = new File(fileNameAndLocation + "/.settings/.sapphire");
+							enableRecording = checkFile.exists();
+							if(enableRecording){  
+								sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", "previousJavaProjectName");
+							}		
+						} 
     	        	}	 
     		        
     		        if(enableRecording){
     		        	switch(delta.getElement().getElementType()){
                 		case 1:  
-                			fwriter.write(sdf.format(cal.getTime()) + " [JAVA_MODEL REMOVED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "JavaModel Removed", delta.getElement().getElementName());
                 			break;       			
                 		case 2: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [JAVA_PROJECT REMOVED]: " + delta.getElement().getElementName() + "\n");
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "JavaProject Removed", delta.getElement().getElementName());
                 			break;	       			
                 		case 3: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [PACKAGE_FRAGMENT_ROOT REMOVED]: " + delta.getElement().getElementName() + "\n");
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "PackageFragmentRoot Removed", delta.getElement().getElementName());
                 			break;        			
                 		case 4: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [PACKAGE_FRAGMENT REMOVED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "PackageFragment Removed", delta.getElement().getElementName());
                 			break;       			
                 		case 5: 
-                			fwriter.write(sdf.format(cal.getTime()) + " [COMPILATION_UNIT REMOVED]: " + delta.getElement().getElementName() + "\n"); 
-                			fwriter.flush();
                 			sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Removed", delta.getElement().getElementName());
                 			break;
 
@@ -1354,66 +1226,9 @@ public class JavaModelListener implements IElementChangedListener{
 			 } else if (descriptor instanceof ChildPropertyDescriptor) {
 				 ChildPropertyDescriptor child= (ChildPropertyDescriptor)descriptor;
 				 ASTNode childNode= (ASTNode)node.getStructuralProperty(child);
-				 if (childNode != null){	
+				 if (childNode != null){
 					 
-					 if(child.getId().equals("body") || child.getId().equals("thenStatement") 
-							 || child.getId().equals("elseStatement")){
-						 
-						 String str = mapValue.get(childNode.getParent().getNodeType());
-						 if(child.getId().equals("elseStatement")){
-							 str = "[ELSE_STATEMENT]";
-						 }
-						 int lineNumber;
-						 if(isTempLarger){
-							 lineNumber = astRootTemp.getLineNumber(node.getStartPosition());
-						 }
-						 else{
-							 lineNumber = astRoot.getLineNumber(node.getStartPosition());	
-						 }	
-						 if(lineNumberCheck != 0){
-							 if(isTempLarger){
-								 stringArrayTemp.add(lineNumberCheck + " $ " + long2);
-								 stringArrayTempContent.add(long2);
-								 lineNumberCheck = 0;
-								 long2 = ""; 
-								 stringArrayTemp.add(lineNumber + " $ OPEN " + str);
-								 stringArrayTempContent.add("OPEN " + str);	 
-							 }
-							 else{
-								 stringArray.add(lineNumberCheck + " $ " + long2);
-								 stringArrayContent.add(long2);
-								 lineNumberCheck = 0;
-								 long2 = "";
-								 stringArray.add(lineNumber + " $ OPEN " + str);
-								 stringArrayContent.add("OPEN " + str);
-							 }
-						 }		 
-						 print(childNode);
-						 
-						 if(lineNumberCheck != 0){
-							 if(isTempLarger){
-								 stringArrayTemp.add(lineNumberCheck + " $ " + long2);
-								 stringArrayTempContent.add(long2);
-								 lineNumberCheck = 0;
-								 long2 = ""; 
-								 stringArrayTemp.add(lastLineNumber + " $ CLOSE " + str);
-								 stringArrayTempContent.add("CLOSE " + str);
-							 }
-							 else{
-								 stringArray.add(lineNumberCheck + " $ " + long2);
-								 stringArrayContent.add(long2);
-								 lineNumberCheck = 0;
-								 long2 = "";
-								 stringArray.add(lastLineNumber + " $ CLOSE " + str);
-								 stringArrayContent.add("CLOSE " + str);
-							 }
-						 }
-					 }		 
-					 else{
-						 print(childNode);
-					 }
-					 
-					 
+					 print(childNode);
 				 }
 			 } else {
 				 ChildListPropertyDescriptor list= (ChildListPropertyDescriptor)descriptor;
@@ -1510,15 +1325,8 @@ public class JavaModelListener implements IElementChangedListener{
 
 	public static void endPlugin() {
 		if(enableRecording){
-			Calendar cal = Calendar.getInstance();
-	        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
         	try {
-				fwriter.write(sdf.format(cal.getTime()) + " [PLUGIN CLOSED]\n");
-				fwriter.flush();
-				fwriter.close();
 				sqlh.sqlMain(fileNameAndLocation, "Plugin Closed", previousJavaProjectName);
-			} catch (IOException e) {
-				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
 				e.printStackTrace();
 			}
