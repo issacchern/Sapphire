@@ -34,6 +34,8 @@ import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IElementChangedListener;
 import org.eclipse.jdt.core.IJavaElementDelta;
+import org.eclipse.jdt.core.IMethod;
+import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
 import org.eclipse.jdt.core.dom.ASTNode;
@@ -44,8 +46,10 @@ import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.ChildPropertyDescriptor;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
+import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
+import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
 
 import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
@@ -79,10 +83,10 @@ public class JavaModelListener implements IElementChangedListener{
 	private static HashMap<Integer, String> mapValue; // for node type
 	private static IElementChangedListener _listener = new JavaModelListener();
 	private ICompilationUnit cuTemp;	
-	private static String sourceTemp;
+	private static String sourceTemp = "";
 	private static CompilationUnit astRootTemp;
 	private ICompilationUnit cu;
-	private static String source;
+	private static String source = "";
 	private static CompilationUnit astRoot;
 	private static List<String> stringArray = new ArrayList<String>();
 	private static List<String> stringArrayContent = new ArrayList<String>();
@@ -94,12 +98,18 @@ public class JavaModelListener implements IElementChangedListener{
 	private static List<String> commentListContent = new ArrayList<String>();
 	private static List<String> commentListTemp = new ArrayList<String>();
 	private static List<String> commentListTempContent = new ArrayList<String>();
+
 	
 	private static String command = "";
 	private static String commandTemp = "";
 	private static final int DURATION = 300000; // refresh rate at 5 mins
 	private String current_time= "";
 	private String past_time = "" ;
+	
+	private static String sourceTempError ="";
+	private static String sourceError = "";
+	private static String concatError = "";
+	private static boolean errorEqualSourceTemp = true;
 
 	
 	/**
@@ -210,7 +220,7 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	@Override
 	public void elementChanged(ElementChangedEvent event) {	
-		
+			
 		if(event.getDelta().getElement().getElementType() == JAVA_MODEL){
 			traverseAndPrintJavaModel(event.getDelta());
 		}
@@ -225,6 +235,86 @@ public class JavaModelListener implements IElementChangedListener{
 		}	
 	}
 	
+	public void error_printing(ElementChangedEvent event){
+		
+		try {
+			if(errorEqualSourceTemp){
+				sourceTempError = sourceTemp;		
+			}else{
+				sourceTempError = sourceError;
+			}
+			
+			sourceError = ((ICompilationUnit) event.getDelta().getElement()).getSource();
+			
+			diff_match_patch dmp = new diff_match_patch();
+			LinkedList<Diff> df = dmp.diff_lines_only(sourceTempError,sourceError);
+			
+			ArrayList<String> a1 = new ArrayList<String>();
+	    	ArrayList<String> a2 = new ArrayList<String>();
+	    	
+			for(int i = 0; i < df.size(); i++){
+				String df_string = df.get(i).toString();
+				String temp_df_string = df_string.substring(9,df_string.length() - 1).replaceAll("  ", "").
+						replaceAll("\t","");
+	    		if(df_string.substring(0, 6).equals("INSERT") && df_string.length() > 8 ){
+	    			a1.add(temp_df_string);
+	    			
+	    		}
+	    		else if(df_string.substring(0, 6).equals("DELETE") && df_string.length() > 8 ){
+	    			a2.add(temp_df_string);
+	    		}
+	    	}
+			
+	    	for(int i = 0; i < a1.size();i++){	
+	    		String[] lines = a1.get(i).split("\r\n|\r|\n");
+				for (String line : lines) {	
+					if(line.length() > 0)
+						concatError = concatError + "[+] " + line + "\n";
+				}
+	    			
+	    	}
+	    		    			    	
+	    	for(int i = 0; i < a2.size();i++){		
+	    		String[] lines = a2.get(i).split("\r\n|\r|\n");
+				for (String line : lines) {	
+					if(line.length() > 0)
+						concatError = concatError + "[-] " + line + "\n";
+				}    		    		
+	    	}
+	    	   	
+	    	
+	    	if(enableRecording){
+				try {
+					if(concatError.length() > 2){		
+						concatError = concatError.substring(0, concatError.length() - 1);
+						command = "CompilationUnit Error";
+						sqlh.sqlError(fileNameAndLocation, className, concatError);
+						if(!command.equals(commandTemp)){
+							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", className);
+						}
+						commandTemp = command;
+					}
+					
+				} catch (ClassNotFoundException e) {
+					e.printStackTrace();
+				}	
+			}
+	    	
+	    	System.out.println(concatError);
+			
+			
+
+		} catch (JavaModelException e2) {
+			e2.printStackTrace();
+		}
+		
+		errorEqualSourceTemp = false;
+
+	}
+	
+	
+	
+	
 	/**
 	 * This function checks if there is any error in the CompilationUnit.
 	 * 
@@ -236,7 +326,7 @@ public class JavaModelListener implements IElementChangedListener{
 		if (event.getDelta().getCompilationUnitAST().getProblems().length > 0){
 			boolean true_or_false = true;
 			
-			String concatError = "";
+			concatError = "";
 			
 			for (IProblem problem : (event.getDelta().getCompilationUnitAST().getProblems())){
 				if (problem.isError()){
@@ -247,27 +337,7 @@ public class JavaModelListener implements IElementChangedListener{
 					}
 				}
 			}
-			
-			if(enableRecording){
-				try {
-					if(concatError.length() > 2){		
-						concatError = concatError.substring(0, concatError.length() - 1);
-						command = "CompilationUnit Error";
-						sqlh.sqlError(fileNameAndLocation, className, concatError);
-						if(!command.equals(commandTemp)){
-							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", className);
-						}
-						
-						commandTemp = command;
-
-						
-					}
-					
-				} catch (ClassNotFoundException e) {
-					e.printStackTrace();
-				}	
-			}
-
+		
 			return true_or_false;				
 		}
 		
@@ -854,6 +924,8 @@ public class JavaModelListener implements IElementChangedListener{
 								 * We expect the else statement will only be triggered the maximum number of 
 								 * java classes in the project.
 								 */
+								
+								errorEqualSourceTemp = true;
 							
 								if(mapAST.containsKey(projectAndClassName)){
 									astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
@@ -866,6 +938,8 @@ public class JavaModelListener implements IElementChangedListener{
 									printAST(event);
 									mapAST.put(projectAndClassName, astRootTemp);	
 								}	
+							} else{
+								error_printing(event);
 							}
 						}
 					}
@@ -895,6 +969,8 @@ public class JavaModelListener implements IElementChangedListener{
 									boolean no_error = error_checking(event);
 
 									if(no_error){
+										errorEqualSourceTemp = true;
+										
 										if(mapAST.containsKey(projectAndClassName)){
 											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 											printAST(event);
@@ -905,6 +981,8 @@ public class JavaModelListener implements IElementChangedListener{
 											printAST(event);
 											mapAST.put(projectAndClassName, astRootTemp);
 										}		
+									} else{
+										error_printing(event);
 									}
 
 								}
@@ -924,6 +1002,8 @@ public class JavaModelListener implements IElementChangedListener{
 									boolean no_error = error_checking(event);
 
 									if(no_error){
+										
+										errorEqualSourceTemp = true;
 										if(mapAST.containsKey(projectAndClassName)){
 											astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 											printAST(event);
@@ -935,7 +1015,9 @@ public class JavaModelListener implements IElementChangedListener{
 											printAST(event);
 											mapAST.put(projectAndClassName, astRootTemp);
 										}	
-									}	
+									} else{
+										error_printing(event);
+									}
 								}	
 							}
 							
@@ -997,6 +1079,7 @@ public class JavaModelListener implements IElementChangedListener{
 								boolean no_error = error_checking(event);
 
 								if(no_error){
+									errorEqualSourceTemp = true;
 									if(mapAST.containsKey(projectAndClassName)){
 										astRootTemp = (CompilationUnit) mapAST.get(projectAndClassName);
 										printAST(event);
@@ -1007,6 +1090,8 @@ public class JavaModelListener implements IElementChangedListener{
 										printAST(event);
 										mapAST.put(projectAndClassName, astRootTemp);
 									}		
+								} else{
+									error_printing(event);
 								}
 							}
 							
