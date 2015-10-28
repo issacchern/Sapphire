@@ -34,7 +34,6 @@ import org.eclipse.jdt.core.ElementChangedEvent;
 import org.eclipse.jdt.core.ICompilationUnit;
 import org.eclipse.jdt.core.IElementChangedListener;
 import org.eclipse.jdt.core.IJavaElementDelta;
-import org.eclipse.jdt.core.IMethod;
 import org.eclipse.jdt.core.JavaModelException;
 import org.eclipse.jdt.core.compiler.IProblem;
 import org.eclipse.jdt.core.dom.AST;
@@ -46,10 +45,8 @@ import org.eclipse.jdt.core.dom.ChildListPropertyDescriptor;
 import org.eclipse.jdt.core.dom.ChildPropertyDescriptor;
 import org.eclipse.jdt.core.dom.Comment;
 import org.eclipse.jdt.core.dom.CompilationUnit;
-import org.eclipse.jdt.core.dom.IBinding;
 import org.eclipse.jdt.core.dom.Javadoc;
 import org.eclipse.jdt.core.dom.LineComment;
-import org.eclipse.jdt.core.dom.MethodDeclaration;
 import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
 
 import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
@@ -98,7 +95,6 @@ public class JavaModelListener implements IElementChangedListener{
 	private static List<String> commentListContent = new ArrayList<String>();
 	private static List<String> commentListTemp = new ArrayList<String>();
 	private static List<String> commentListTempContent = new ArrayList<String>();
-
 	
 	private static String command = "";
 	private static String commandTemp = "";
@@ -109,6 +105,7 @@ public class JavaModelListener implements IElementChangedListener{
 	private static String sourceTempError ="";
 	private static String sourceError = "";
 	private static String concatError = "";
+	private static String concatErrorDiff = "";
 	private static boolean errorEqualSourceTemp = true;
 
 	
@@ -237,7 +234,15 @@ public class JavaModelListener implements IElementChangedListener{
 	
 	public void error_printing(ElementChangedEvent event){
 		
+		concatErrorDiff = "";
+		
 		try {
+			// prevent misinterpretation when initializing the file 
+			if(sourceTemp == ""){
+				sourceTemp = ((ICompilationUnit) event.getDelta().getElement()).getSource();	
+			}
+			
+			
 			if(errorEqualSourceTemp){
 				sourceTempError = sourceTemp;		
 			}else{
@@ -269,7 +274,7 @@ public class JavaModelListener implements IElementChangedListener{
 	    		String[] lines = a1.get(i).split("\r\n|\r|\n");
 				for (String line : lines) {	
 					if(line.length() > 0)
-						concatError = concatError + "[+] " + line + "\n";
+						concatErrorDiff = concatErrorDiff + "[+] " + line + "\n";
 				}
 	    			
 	    	}
@@ -278,17 +283,55 @@ public class JavaModelListener implements IElementChangedListener{
 	    		String[] lines = a2.get(i).split("\r\n|\r|\n");
 				for (String line : lines) {	
 					if(line.length() > 0)
-						concatError = concatError + "[-] " + line + "\n";
+						concatErrorDiff = concatErrorDiff + "[-] " + line + "\n";
 				}    		    		
 	    	}
-	    	   	
+	    	
+	    	
+	    	concatError = concatError + "\n<--Changes from last recorded--> \n";
+	    	
+	    	diff_match_patch dmp2 = new diff_match_patch();
+			LinkedList<Diff> df2 = dmp2.diff_lines_only(sourceTemp,sourceError);
+			
+			ArrayList<String> a12 = new ArrayList<String>();
+	    	ArrayList<String> a22 = new ArrayList<String>();
+	    	
+			for(int i = 0; i < df2.size(); i++){
+				String df_string = df2.get(i).toString();
+				String temp_df_string = df_string.substring(9,df_string.length() - 1).replaceAll("  ", "").
+						replaceAll("\t","");
+	    		if(df_string.substring(0, 6).equals("INSERT") && df_string.length() > 8 ){
+	    			a12.add(temp_df_string);
+	    			
+	    		}
+	    		else if(df_string.substring(0, 6).equals("DELETE") && df_string.length() > 8 ){
+	    			a22.add(temp_df_string);
+	    		}
+	    	}
+			
+			for(int i = 0; i < a12.size();i++){	
+	    		String[] lines = a12.get(i).split("\r\n|\r|\n");
+				for (String line : lines) {	
+					if(line.length() > 0)
+						concatError = concatError + "[ADDED] " + line + "\n";
+				}
+	    			
+	    	}
+	    		    			    	
+	    	for(int i = 0; i < a22.size();i++){		
+	    		String[] lines = a22.get(i).split("\r\n|\r|\n");
+				for (String line : lines) {	
+					if(line.length() > 0)
+						concatError = concatError + "[REMOVED] " + line + "\n";
+				}    		    		
+	    	}
 	    	
 	    	if(enableRecording){
 				try {
 					if(concatError.length() > 2){		
 						concatError = concatError.substring(0, concatError.length() - 1);
 						command = "CompilationUnit Error";
-						sqlh.sqlError(fileNameAndLocation, className, concatError);
+						sqlh.sqlError(fileNameAndLocation, className, concatErrorDiff,concatError);
 						if(!command.equals(commandTemp)){
 							sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Error", className);
 						}
@@ -300,8 +343,6 @@ public class JavaModelListener implements IElementChangedListener{
 				}	
 			}
 	    	
-	    	System.out.println(concatError);
-			
 			
 
 		} catch (JavaModelException e2) {
@@ -322,6 +363,11 @@ public class JavaModelListener implements IElementChangedListener{
 	 */	
 	
 	public boolean error_checking(ElementChangedEvent event){
+		
+		// prevent null exception
+		if(event.getDelta().getCompilationUnitAST() == null){
+			return false;
+		}
 		
 		if (event.getDelta().getCompilationUnitAST().getProblems().length > 0){
 			boolean true_or_false = true;
@@ -473,36 +519,10 @@ public class JavaModelListener implements IElementChangedListener{
 				parserTemp.setKind(ASTParser.K_COMPILATION_UNIT);
 				parserTemp.setResolveBindings(true);
 				astRootTemp = (CompilationUnit) parserTemp.createAST(null);
-		        
-		        // parse the astRootTemp
-		        isTempLarger = true;
-				long2 = "";
-				lineNumberCheck = 0;
-				print(astRootTemp);
-				
-				if(lineNumberCheck == 0 || long2.length() == 0){
-				}
-				else{
-					stringArrayTemp.add(lineNumberCheck + " $ " + long2); 
-				}
 
 				//SQLite initialization
-				sqlh.sqlMain(fileNameAndLocation, "Source File Initialized", className);
-				sqlh.sqlSource(fileNameAndLocation, className, astRootTemp.toString());
-						
-				// handle comments and docs
-				parse(mapComment.get(projectAndClassName));	
-				
-				String concatComment = "";
-				for(int i = 0; i < commentListTemp.size(); i++){
-					concatComment = concatComment + commentListTemp.get(i) + "\n";
-				}
-					
-				if(concatComment.length() > 2){
-					concatComment = concatComment.substring(0, concatComment.length() - 1);
-					sqlh.sqlSource(fileNameAndLocation, className, concatComment);
-				}
-				
+				sqlh.sqlMain(fileNameAndLocation, "Source File Initialized", className);				
+				sqlh.sqlSource(fileNameAndLocation, className, sourceTemp.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));
 				arrayClear();
 			}
 			
@@ -511,7 +531,7 @@ public class JavaModelListener implements IElementChangedListener{
 					Calendar cal = Calendar.getInstance();
 			        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
 					cu = (ICompilationUnit) event.getDelta().getElement();				
-					source = cu.getSource();
+					source = cu.getSource();					
 					ASTParser parser = ASTParser.newParser(AST.JLS8);
 					parser.setSource(cu);
 					parser.setKind(ASTParser.K_COMPILATION_UNIT);
@@ -768,14 +788,7 @@ public class JavaModelListener implements IElementChangedListener{
 					afterCommentAdded.addAll(commentList);
 					ArrayList<String> afterCommentRemoved = new ArrayList<String>();
 					afterCommentRemoved.addAll(commentListTemp);
-					
-					String sourceComment = "";
-					for(int i =0; i < afterCommentAdded.size(); i++){
-						sourceComment = sourceComment + afterCommentAdded.get(i).replace("# [LINE_COMMENT]","|")
-								.replace("# [BLOCK_COMMENT]","|").replace("# [JAVADOC]","|")
-								+ "\n";
-					}
-					
+									
 					// get the ArrayList with only the new elements added 
 					for(int i = 0 ; i < commentList.size(); i++){
 						int index = commentList.get(i).indexOf('#');
@@ -844,7 +857,7 @@ public class JavaModelListener implements IElementChangedListener{
 					Date date2 = sdf.parse(past_time);
 					if( date1.getTime() - date2.getTime() > DURATION){
 						past_time = current_time;
-						sqlh.sqlSource(fileNameAndLocation, className, astRoot.toString() + "\n" + sourceComment);					
+						sqlh.sqlSource(fileNameAndLocation, className, source.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));					
 					}
 					
 					// remove all elements in those lists 
@@ -853,6 +866,11 @@ public class JavaModelListener implements IElementChangedListener{
 					// set the current CompilationUnit as previous one for next elementChanged event 
 					cuTemp = cu;			
 					sourceTemp = cuTemp.getSource();
+					
+
+					
+					
+					
 					mapComment.replace(projectAndClassName, sourceTemp);
 					ASTParser parserTemp = ASTParser.newParser(AST.JLS8);
 					parserTemp.setSource(cuTemp); 
@@ -994,6 +1012,8 @@ public class JavaModelListener implements IElementChangedListener{
 							        
 							        if(enableRecording){
 										sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Changed", className);
+										// prevent unnecessary error messages
+										sourceTemp = "";
 							        }
 									
 													
@@ -1065,6 +1085,7 @@ public class JavaModelListener implements IElementChangedListener{
 						
 						if(enableRecording){  
 							sqlh.sqlMain(fileNameAndLocation, "Plugin Initialized", previousJavaProjectName);
+							sourceTemp = "";
 						}
 						
 						if(event.getDelta().getElement().getElementType() == COMPILATION_UNIT){

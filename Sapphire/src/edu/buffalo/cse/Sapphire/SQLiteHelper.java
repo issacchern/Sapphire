@@ -55,7 +55,7 @@ public class SQLiteHelper {
 		}
 	}
 
-	public void sqlError(String location, String className, String error_message)
+	public void sqlError(String location, String className, String line_diff, String error_message)
 			throws ClassNotFoundException {
 		
 		Class.forName("org.sqlite.JDBC");
@@ -70,10 +70,12 @@ public class SQLiteHelper {
 					+ "error_id INTEGER primary key autoincrement, "
 					+ "time_stamp TEXT, "
 					+ "class_name TEXT, "
-					+ "error_message TEXT)");
+					+ "line_diff TEXT, "
+					+ "error_message TEXT)"
+					);
 
-			str = "insert into error (time_stamp,class_name,error_message) values(datetime('now','localtime'), '" + className 
-					+ "' , '" + error_message + "')";
+			str = "insert into error (time_stamp,class_name,line_diff,error_message) values(datetime('now','localtime'), '" + className 
+					+ "' , '" + line_diff + "' , '" + error_message + "')";
 
 			statement.executeUpdate(str);
 
