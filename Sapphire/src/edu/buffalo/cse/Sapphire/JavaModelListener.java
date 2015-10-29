@@ -857,6 +857,7 @@ public class JavaModelListener implements IElementChangedListener{
 					Date date2 = sdf.parse(past_time);
 					if( date1.getTime() - date2.getTime() > DURATION){
 						past_time = current_time;
+						sqlh.sqlMain(fileNameAndLocation, "Source File Created", className);
 						sqlh.sqlSource(fileNameAndLocation, className, source.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));					
 					}
 					
