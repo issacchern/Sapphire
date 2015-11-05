@@ -522,7 +522,7 @@ public class JavaModelListener implements IElementChangedListener{
 
 				//SQLite initialization
 				sqlh.sqlMain(fileNameAndLocation, "Source File Initialized", className);				
-				sqlh.sqlSource(fileNameAndLocation, className, sourceTemp.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));
+//				sqlh.sqlSource(fileNameAndLocation, className, sourceTemp.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));
 				arrayClear();
 			}
 			
@@ -858,7 +858,7 @@ public class JavaModelListener implements IElementChangedListener{
 					if( date1.getTime() - date2.getTime() > DURATION){
 						past_time = current_time;
 						sqlh.sqlMain(fileNameAndLocation, "Source File Created", className);
-						sqlh.sqlSource(fileNameAndLocation, className, source.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));					
+//						sqlh.sqlSource(fileNameAndLocation, className, source.replaceAll("(?m)^[ \t]*\r?\n", "").replaceAll("\t", "   "));					
 					}
 					
 					// remove all elements in those lists 

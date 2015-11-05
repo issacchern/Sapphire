@@ -51,7 +51,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 		super.start(context);
 		plugin = this;
 	
-		JavaCore.addElementChangedListener(JavaModelListener.getListener());
+		JavaCore.addElementChangedListener(JavaModelListenerNew.getListener());
 		
 	}
 
@@ -61,7 +61,7 @@ public class Activator extends AbstractUIPlugin implements IStartup {
 	 */
 	public void stop(BundleContext context) throws Exception {		
 		
-		JavaModelListener.endPlugin();
+		JavaModelListenerNew.endPlugin();
 		plugin = null;
 		super.stop(context);	
 	}

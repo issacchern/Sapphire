@@ -9,6 +9,8 @@
  * Sapphire © 2015 University at Buffalo. All rights reserved.  
  */
 
+//license apache sqlite
+
 package edu.buffalo.cse.Sapphire;
 
 import java.sql.*;
@@ -92,7 +94,7 @@ public class SQLiteHelper {
 
 	}
 
-	public void sqlSource(String location, String className, String source_file)
+	public void sqlSource(String location, String className, String error_message, String line_diff ,String source_file)
 			throws ClassNotFoundException {
 		
 		Class.forName("org.sqlite.JDBC");
@@ -108,10 +110,12 @@ public class SQLiteHelper {
 					+ "source_id INTEGER primary key autoincrement, "
 					+ "time_stamp TEXT, "
 					+ "class_name TEXT, "
+					+ "error_message TEXT,"
+					+ "line_diff TEXT,"
 					+ "source TEXT)");
 
-			str = "insert into source_file (time_stamp,class_name,source) values( datetime('now','localtime'), '" + className 
-					+ "' , '" + source_file + "')";
+			str = "insert into source_file (time_stamp,class_name,error_message, line_diff, source) values( datetime('now','localtime'), '" + className 
+					+ "' , '" + error_message + "' , '" + line_diff + "' , '" + source_file + "')";
 
 			statement.executeUpdate(str);
 
