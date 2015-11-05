@@ -1,10 +1,13 @@
 /**
-
  * This file is part of Sapphire.
  * 
  * Sapphire is a free plugin software, licensed under the terms of the 
  * Eclipse Public License, version 1.0.  The license is available at
  * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Sapphire uses sqlite-jdbc from xerial as referenced library, 
+ * which follows Apache License 2.0. The license is available at 
+ * http://www.apache.org/licenses/
  * 
  * Sapphire © 2015 University at Buffalo. All rights reserved.  
  */
@@ -66,7 +69,7 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	private static boolean enableRecording = false;
 	private static int lastLineNumber = 0;
 	private static int lineNumberCheck = 0;
-	private static HashMap<String, String> mapSource = new HashMap<String, String>(); // for ASTNode
+	private static HashMap<String, String> mapSource = new HashMap<String, String>(); 
 	private static HashMap<String, String> mapHolder = new HashMap<String, String>();
 	private static HashMap<Integer, String> mapValue; // for node type
 	private static IElementChangedListener _listener = new JavaModelListenerNew();

@@ -29,23 +29,20 @@ The objective of creating this plugin is to study the process of how beginner st
 
 # Sample Output
 
-This plugin will create .db file for SQLite database in the project folder. I use SQLiteBrowser for viewing the data. Snapshots below (captured in SQLiteBrowser) are the main four tables of the database.
+This plugin will create .db file for SQLite database in the project folder. Snapshots below are the main tables of the database.
 
 - Main Event Table:
 
-![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite3.JPG)
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/main.JPG)
 
 - CompilationUnit Table:
 
-![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite1.JPG)
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/cu.JPG)
 
-- Error Table: 
-
-![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite2.JPG)
 
 - Source File Table:
 
-![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/sqlite4.JPG)
+![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/source.JPG)
 
 
 
@@ -57,6 +54,7 @@ If for some reasons the plugin is not installed properly, please check the log f
 
 # License and Copyright
 
-Licensed under the terms of the Eclipse Public License, version 1.0.  The license is available at http://www.eclipse.org/legal/epl-v10.html
+Sapphire is a free plugin software, licensed under the terms of the Eclipse Public License, version 1.0.  The license is available at http://www.eclipse.org/legal/epl-v10.html  
+Sapphire uses sqlite-jdbc from xerial as referenced library, which follows Apache License 2.0. The license is available at http://www.apache.org/licenses/  
 
 © 2015 University at Buffalo. All rights reserved. 

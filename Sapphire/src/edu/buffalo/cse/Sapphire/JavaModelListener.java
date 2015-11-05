@@ -1,10 +1,13 @@
 /**
-
  * This file is part of Sapphire.
  * 
  * Sapphire is a free plugin software, licensed under the terms of the 
  * Eclipse Public License, version 1.0.  The license is available at
  * http://www.eclipse.org/legal/epl-v10.html
+ * 
+ * Sapphire uses sqlite-jdbc from xerial as referenced library, 
+ * which follows Apache License 2.0. The license is available at 
+ * http://www.apache.org/licenses/
  * 
  * Sapphire © 2015 University at Buffalo. All rights reserved.  
  */
@@ -53,12 +56,7 @@ import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 
 
 /**
- * This class handles all the changes to the JavaModel, recording all of
- * the changes that the user has made into a text file. 
- * 
- * NOTE: If you add the .sapphire file while using eclipse, chances 
- * are the plugin will not be installed. You will have to restart 
- * eclipse to run the plugin.
+ * NOTE: This file is no longer being used in this plugin program.
  * 
  * @author Chern Yee Chua
  */
