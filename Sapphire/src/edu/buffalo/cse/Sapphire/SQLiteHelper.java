@@ -100,6 +100,7 @@ public class SQLiteHelper {
 			throws ClassNotFoundException {
 				
 		line_diff = line_diff.replaceAll("'", "`");
+		source_file = source_file.replaceAll("'", "`");
 		
 		Class.forName("org.sqlite.JDBC");
 		String str, dbLocation;
