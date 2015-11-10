@@ -98,6 +98,8 @@ public class SQLiteHelper {
 
 	public void sqlSource(String location, String className, String error_message, String line_diff ,String source_file)
 			throws ClassNotFoundException {
+				
+		line_diff = line_diff.replaceAll("'", "`");
 		
 		Class.forName("org.sqlite.JDBC");
 		String str, dbLocation;
@@ -136,6 +138,9 @@ public class SQLiteHelper {
 
 	public void sqlEdit(String location, String className, String line_diff, String description)
 			throws ClassNotFoundException {
+		
+		line_diff = line_diff.replaceAll("'", "`");
+		description = description.replaceAll("'", "`");
 		
 		Class.forName("org.sqlite.JDBC");
 		String str, dbLocation;

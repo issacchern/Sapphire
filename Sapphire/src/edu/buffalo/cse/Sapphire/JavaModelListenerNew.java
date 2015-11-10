@@ -92,10 +92,15 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	private static final int NUMBER_CHARACTER = 100;
 	private static String current_state = "";
 	
-	private static final int DURATION = 2500;
+	private static final int DURATION = 2000;
 	private String current_time= "";
 	private String past_time = "" ;
 	private static String srcHolder = "";
+	
+	private static int globalCount = 0;
+	private static boolean moreThanOneLine = false;
+	
+	private static String veryTempString = "";
 
 	
 	/**
@@ -268,23 +273,27 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		if(enableRecording){
 			
 			try{
-				
-				Calendar cal = Calendar.getInstance();
-		        SimpleDateFormat sdf = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z");
-				
-		        current_time = sdf.format(cal.getTime());
-				
-				Date date1 = sdf.parse(current_time);
-				Date date2 = sdf.parse(past_time);
-				if( date1.getTime() - date2.getTime() > DURATION){
-					past_time = current_time;
-					printSource(event);
-				}
-				else{
-					past_time = current_time;
-				}
-	
-				
+				new Thread(){
+					public void run(){
+						try{
+							globalCount++;
+							Thread.sleep(DURATION);
+							
+							if(globalCount > 1){	
+								
+							} else{
+
+								printSource(event);		
+							}
+							globalCount--;
+					
+						} catch(Exception e){
+							e.printStackTrace();
+						}
+					}
+					
+				}.start();			
+
 			} catch(Exception e){
 				e.printStackTrace();
 			}
@@ -294,6 +303,7 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	
 	
 	public void printSource(ElementChangedEvent event){
+		
 		
 		try{
 			if(sourceTemp.equals("")){
@@ -334,6 +344,7 @@ public class JavaModelListenerNew implements IElementChangedListener{
 				//srcHolder = strTemp.replaceAll("  " ,"").replaceAll("\t", "   ");
 				current_state = "main";
 				mapHolder.put(projectAndClassName, strTemp2);
+				mapSource.put(projectAndClassName, sourceTemp);
 				arrayClear();
 				
 				
@@ -360,6 +371,7 @@ public class JavaModelListenerNew implements IElementChangedListener{
 						}					
 					}
 				}
+				
 				}
 				/* ---------------------------------*/
 				
@@ -407,34 +419,26 @@ public class JavaModelListenerNew implements IElementChangedListener{
 						str2 = str2 + lines[i] + "\n";
 						if(j < 10){
 							str = str + " 000" + j + " " + lines[i] + "\n";
-							array.add(" 000" + j + " " + lines[i]);
-							//System.out.println("   " + j + " " + lines[i]);	
+							array.add(" 000" + j + " " + lines[i]);	
 						} else if( j < 100){
 							str = str + " 00" + j + " " + lines[i] + "\n";
 							array.add(" 00" + j + " " + lines[i]);
-							//System.out.println("  " + j + " " + lines[i]);
 			
 						} else if( j < 1000){
 							str = str + " 0" + j + " " + lines[i] + "\n";	
 							array.add(" 0" + j + " " + lines[i]);
-							//System.out.println(" " + j + " " + lines[i]);
 							
 						} else {
 							str = str + " " + j + " " + lines[i] + "\n";	
 							array.add(" " + j + " " + lines[i]);
-							//System.out.println("" + j + " " + lines[i]);
 						}			
 					}		
 				}
 				
-				
-
 				if(mapHolder.containsKey(projectAndClassName)){
 					srcHolder =  mapHolder.get(projectAndClassName);
 				}
-				
-				
-				
+
 		    	if(str2.length() - srcHolder.length() > NUMBER_CHARACTER || srcHolder.length() - str2.length() > NUMBER_CHARACTER){
 		    				    	
 			    	String errorLine = "";
@@ -503,9 +507,6 @@ public class JavaModelListenerNew implements IElementChangedListener{
 			    		strX = strX + "- " + a2tempX.get(i).replaceAll("\t", "") + "\n";
 			    	}
 					
-					
-					
-			    	
 			    	sqlh.sqlMain(fileNameAndLocation, "Source File Generated", className);				
 					sqlh.sqlSource(fileNameAndLocation, className, errorLine, strX ,str.replaceAll("  " ,"").replaceAll("\t", "   "));
 					current_state = "main";
@@ -710,6 +711,8 @@ public class JavaModelListenerNew implements IElementChangedListener{
 				strTemp = str;
 				strTemp2 = str2;
 				current_state = "compilationUnit";
+				
+				mapSource.replace(projectAndClassName, sourceTemp);
 
 			}
 			
@@ -770,12 +773,10 @@ public class JavaModelListenerNew implements IElementChangedListener{
 								sourceTemp =  mapSource.get(projectAndClassName);
 								
 								checkSource(event);
-								mapSource.replace(projectAndClassName, sourceTemp);
 							}
 							else{
 								sourceTemp = "";
 								checkSource(event);
-								mapSource.put(projectAndClassName, sourceTemp);	
 							}	 
 						}
 					}
@@ -805,12 +806,10 @@ public class JavaModelListenerNew implements IElementChangedListener{
 									if(mapSource.containsKey(projectAndClassName)){
 										sourceTemp = mapSource.get(projectAndClassName);
 										checkSource(event);
-										mapSource.replace(projectAndClassName, sourceTemp);
 									}
 									else{
 										sourceTemp = "";
 										checkSource(event);
-										mapSource.put(projectAndClassName, sourceTemp);
 									}			
 
 								}
@@ -831,13 +830,11 @@ public class JavaModelListenerNew implements IElementChangedListener{
 									
 									if(mapSource.containsKey(projectAndClassName)){
 										sourceTemp = mapSource.get(projectAndClassName);
-										checkSource(event);
-										mapSource.replace(projectAndClassName, sourceTemp);									
+										checkSource(event);								
 									}
 									else{
 										sourceTemp = "";
 										checkSource(event);
-										mapSource.put(projectAndClassName, sourceTemp);
 									}	
 
 									
@@ -888,12 +885,10 @@ public class JavaModelListenerNew implements IElementChangedListener{
 								if(mapSource.containsKey(projectAndClassName)){
 									sourceTemp = mapSource.get(projectAndClassName);
 									checkSource(event);
-									mapSource.replace(projectAndClassName, sourceTemp);	
 								}
 								else{
 									sourceTemp = "";
 									checkSource(event);
-									mapSource.put(projectAndClassName, sourceTemp);
 								}	
 
 							}
@@ -1166,7 +1161,6 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		errorNumberArray.clear();
 		errorArray.clear();
 	}
-
 
 	public static void endPlugin() {
 		if(enableRecording){
