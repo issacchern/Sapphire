@@ -23,6 +23,8 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.eclipse.jdt.core.IJavaElement.JAVA_MODEL;
 import static org.eclipse.jdt.core.IJavaElement.JAVA_PROJECT;
@@ -46,6 +48,7 @@ import org.eclipse.jdt.core.dom.SimplePropertyDescriptor;
 
 import edu.buffalo.cse.Sapphire.diff_match_patch.Diff;
 
+//have fun with working on reconstruction :-)
 
 /**
  * This class handles all the changes to the JavaModel, recording all of
@@ -92,15 +95,12 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	private static final int NUMBER_CHARACTER = 100;
 	private static String current_state = "";
 	
-	private static final int DURATION = 2000;
-	private String current_time= "";
-	private String past_time = "" ;
+	private static final int DURATION = 5000;
 	private static String srcHolder = "";
 	
 	private static int globalCount = 0;
-	private static boolean moreThanOneLine = false;
-	
-	private static String veryTempString = "";
+
+
 
 	
 	/**
@@ -113,7 +113,6 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		// initialize sqlite helper class
 		sqlh = new SQLiteHelper();
 		// initialize the past time for the interval time
-		past_time = new SimpleDateFormat("yyyy.MM.dd 'at' HH:mm:ss z").format(Calendar.getInstance().getTime());
 		
         mapValue = new HashMap<Integer , String>();
         mapValue.put(1, "[ANONYMOUS_CLASS_DECLARATION]");
@@ -266,36 +265,53 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		}
 	}
 	
-
+	private final Lock _mutex = new ReentrantLock(true);
 	
 	public void checkSource(ElementChangedEvent event){
 		
 		if(enableRecording){
 			
-			try{
-				new Thread(){
-					public void run(){
-						try{
-							globalCount++;
-							Thread.sleep(DURATION);
-							
-							if(globalCount > 1){	
+			if(sourceTemp.equals("")){
+				printSource(event);	
+			}
+			
+			else{
+			
+				try{
+					new Thread(){
+						public void run(){
+							try{
 								
-							} else{
-
-								printSource(event);		
+								//synchronization of globalcount
+								_mutex.lock();
+								globalCount++;
+								_mutex.unlock();
+								
+								Thread.sleep(DURATION);
+								
+								if(globalCount > 1){	
+									
+								} else{
+									_mutex.lock();
+									printSource(event);		
+									_mutex.unlock();
+								}
+								
+								_mutex.lock();
+								globalCount--;
+								_mutex.unlock();
+						
+							} catch(Exception e){
+								e.printStackTrace();
 							}
-							globalCount--;
-					
-						} catch(Exception e){
-							e.printStackTrace();
 						}
-					}
-					
-				}.start();			
+						
+					}.start();			
 
-			} catch(Exception e){
-				e.printStackTrace();
+				} catch(Exception e){
+					e.printStackTrace();
+				}
+				
 			}
 	
 		}	
@@ -304,7 +320,17 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	
 	public void printSource(ElementChangedEvent event){
 		
+		File checkFile = new File(event.getDelta().getElement().getJavaProject().getProject().getLocation().toString()
+				+ "/.settings/.sapphire");
+
+		if(!event.getDelta().getElement().getJavaProject().getProject().getName().equals(previousJavaProjectName)|| 
+			!event.getDelta().getElement().getJavaProject().getProject().getLocation().toString().equals(fileNameAndLocation) || 
+			!checkFile.exists()){
+			
+			return;
+		}
 		
+
 		try{
 			if(sourceTemp.equals("")){
 				
@@ -612,12 +638,14 @@ public class JavaModelListenerNew implements IElementChangedListener{
 				}	    	
 		    			    	
 		    	String line_diff = "";
-		    	for(int i = 0; i < a12temp.size(); i++){
-		    		line_diff = line_diff + "+" + a1temp.get(i).replaceAll("\t", "") + "\n";
-		    	}
+
 		    	   	
 		    	for(int i = 0; i < a22temp.size(); i++){
 		    		line_diff = line_diff + "-" + a2temp.get(i).replaceAll("\t", "") + "\n";
+		    	}
+		    	
+		    	for(int i = 0; i < a12temp.size(); i++){
+		    		line_diff = line_diff + "+" + a1temp.get(i).replaceAll("\t", "") + "\n";
 		    	}
 		    	
 		    	String line_description = "";
@@ -632,7 +660,21 @@ public class JavaModelListenerNew implements IElementChangedListener{
 			    			if(line2 > line){    			
 			    				String addons = ""; 				 				
 			    				if(errorNumberArray.contains(line)){
-			    					addons = "[" + errorMessageArray.get( errorNumberArray.indexOf(line)) + "]";
+			    					String error_concat = "";
+			    					for(int k = 0; k < errorNumberArray.size(); k++){
+			    						
+			    						if(errorNumberArray.get(k).equals(line)){
+			    							error_concat = error_concat + errorMessageArray.get(k) + " , " ;
+			    						}
+			    						
+			    						
+			    					}
+			    					
+			    					error_concat = error_concat.substring(0, error_concat.length() - 2);
+			    					
+			    					
+			    					addons = "[" + error_concat + "]";
+			    					
 			    				}
 			    				
 			    				else if(stringArrayNumber.contains(line)){
@@ -649,10 +691,12 @@ public class JavaModelListenerNew implements IElementChangedListener{
 			    				if(j > 1){
 			    					line_description = line_description + array.get(j-2).replaceAll("\t", "") + "\n";
 			    				}
-			    				line_description = line_description + "+"+ a1temp.get(0).replaceAll("\t", "") + " " + addons + "\n";  							
 			    				if(a12temp.size() == a22temp.size()){
 			    					line_description = line_description + "-"+ a2temp.get(0).replaceAll("\t", "") + "\n";
-			    				}
+			    				}		    				
+			    				
+			    				line_description = line_description + "+"+ a1temp.get(0).replaceAll("\t", "") + " " + addons + "\n";  							
+
 			    				line_description = line_description + array.get(j).replaceAll("\t", "") + "\n"; 				
 
 			    				break;
@@ -693,11 +737,14 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		    	} 
 
 
+		    
+
 
 
 		    	if(!current_state.equals("compilationUnit")){
 		    		sqlh.sqlMain(fileNameAndLocation, "CompilationUnit Edited", className);		
 		    	}
+		    	
 		    	
 		    	
 		    	if(line_diff.length() > 2 ){
@@ -1121,16 +1168,22 @@ public class JavaModelListenerNew implements IElementChangedListener{
 		}
 		else{
 			str = mapValue.get(node.getParent().getNodeType());
+			node = node.getParent();
+			while(node.getParent() != null){
+				node = node.getParent();
+				str = str + " > " + mapValue.get(node.getNodeType());
+				
+			}
+			
 		}
 		
-
 		if(lineNumberCheck == 0){
 			long2 = str;	
 			lineNumberCheck = lineNumber;
 		 }
 		else{
 			if(lineNumber != lineNumberCheck){		
-				 
+				
 				stringArrayNumber.add(lineNumberCheck);
 				if(lineNumberCheck < 10){
 					stringArray.add( "000" + lineNumberCheck + " " + long2); 	
