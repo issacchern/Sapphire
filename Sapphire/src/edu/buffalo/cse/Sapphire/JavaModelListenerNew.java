@@ -267,7 +267,7 @@ public class JavaModelListenerNew implements IElementChangedListener{
 	
 	private final Lock _mutex = new ReentrantLock(true);
 	
-	public void checkSource(ElementChangedEvent event){
+	public void checkSource(final ElementChangedEvent event){
 		
 		if(enableRecording){
 			

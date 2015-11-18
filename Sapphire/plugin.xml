@@ -3,7 +3,6 @@
 <plugin 
 	name="Sapphire"
 	id="edu.buffalo.cse.sapphire"
-	version="1.1.0"
 	provider-name="University at Buffalo">
 
 	<extension point="org.eclipse.ui.startup">
