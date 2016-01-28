@@ -2,19 +2,18 @@
 
 ![alt tag] (https://github.com/issacchern/Sapphire/blob/master/images/logo.jpg)
 
-Sapphire is a free eclipse plugin software that records the changes under JavaModel in eclipse and exports the recorded data to SQLite database. This plugin is intended for educational and teaching purposes.  
+Sapphire is an eclipse plugin software that records the changes under Java Model in eclipse and exports the recorded data into SQLite database. This plugin is intended for research and educational purposes.  
 
 # Installation
 
-1. Click Download Zip button at the bottom right, extract the folder to your workspace.
-2. Run eclipse navigation and navigate to File> Import...
-3. Select Existing Projects into Workspace and browse for the folder you extracted earlier.
-4. Once the project is created, open the project and double click plugin.xml.
-5. Select Overview tab and click Export Wizard at the right end corner. 
-6. Click finish. Extract the jar file from the Zip file and drop it in the dropins folder inside the eclipse folder.
-7. You are all set!
+1. Click [here](https://github.com/issacchern/Sapphire/blob/master/edu.buffalo.cse.sapphire_1.2.2.1.jar?raw=true) to download the Sapphire plugin.
+2. Drop the Sapphire jar file that you downloaded earlier into eclipse/dropins folder.
+3. Download or use your text editor to create a .sapphire file as toggle file and put it in your project/.settings folder.
+![alt tag](https://github.com/issacchern/Sapphire/blob/master/images/part1.gif)
 
-You could also use the pre-built jar file from the downloaded zip folder and put the jar file in eclipse's dropin folder.
+
+That's it! Feel free to download the source project if you are interested. 
+
 
 # How to use
 
@@ -48,7 +47,7 @@ This plugin will create .db file for SQLite database in the project folder. Snap
 
 # Issues with Installation
 
-If for some reasons the plugin is not installed properly, please check the log file in the ../yourworkspace/.metadata/.log . If the issue is somewhat solvable, such as requiring other software installation, then please do what is necessary. If the problem still exists, please send me an email to issac.chua12@gmail.com. Thank you!
+If for some reasons the plugin is not installed properly, please check the log file in the ../yourworkspace/.metadata/.log . If the issue is somewhat solvable, such as requiring other software installation, then please do what is necessary. If the problem still exists, please send me an email at issac.chua12@gmail.com. Thank you!
 
 
 
